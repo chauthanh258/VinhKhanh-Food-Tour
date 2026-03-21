@@ -145,4 +145,27 @@ router.post('/login', authController.login);
  */
 router.get('/me', authenticate, authController.getMe);
 
+/**
+ * @swagger
+ * /auth/google:
+ *   post:
+ *     summary: Authenticate with Google
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Google login successful
+ */
+router.post('/google', authController.googleLogin);
+
 export default router;
