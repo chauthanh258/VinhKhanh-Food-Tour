@@ -40,7 +40,7 @@ Generate the Prisma client and run migrations:
 npx prisma generate
 
 # Run migrations (creates tables in your DB)
-npx prisma migrate dev --name init
+npx prisma db push
 ```
 
 ### 4. Data Seeding
@@ -80,7 +80,7 @@ JSON OpenAPI definition is available at:
 - `PUT /api/pois/:id` - Update POI (Owner/Admin only)
 - `DELETE /api/pois/:id` - Delete POI (Owner/Admin only)
 
-### Menu Items
+### Menu Items@
 - `POST /api/pois/:poiId/menu-items` - Add dish (Owner/Admin only)
 - `PUT /api/menu-items/:id` - Edit dish (Owner/Admin only)
 - `DELETE /api/menu-items/:id` - Remove dish (Owner/Admin only)

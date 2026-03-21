@@ -32,3 +32,13 @@ export const getMe = async (req: AuthenticatedRequest, res: Response, next: Next
     next(error);
   }
 };
+
+export const googleLogin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idToken } = req.body;
+    const result = await authService.googleAuth(idToken);
+    sendResponse(res, 200, result, 'Google login successful');
+  } catch (error) {
+    next(error);
+  }
+};
