@@ -5,11 +5,11 @@ import dynamic from 'next/dynamic';
 import { ArrowLeft, Volume2, Info, Navigation, Accessibility } from 'lucide-react';
 import Link from 'next/link';
 
-import BottomNav from '@/components/BottomNav';
-import PlaceList from '@/components/PlaceList';
+import BottomNav from '@/app/(app)/tour/components/BottomNav';
+import PlaceList from '@/app/(app)/tour/components/PlaceList';
 
 // Dynamically import Map to avoid SSR issues
-const TourMap = dynamic(() => import('@/components/TourMap'), { 
+const TourMap = dynamic(() => import('@/app/(app)/tour/components/TourMap'), { 
   ssr: false,
   loading: () => <div className="w-full h-full bg-zinc-900 animate-pulse flex items-center justify-center text-zinc-500 font-medium">Đang tải bản đồ...</div>
 });
@@ -41,7 +41,7 @@ export default function TourPage() {
   // Fetch nearby POIs
   const fetchPois = async (lat: number, lng: number) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/pois/nearby?lat=${lat}&lng=${lng}&radius=1500&lang=vi`);
+      const res = await fetch(`http://localhost:3001/api/pois?lat=${lat}&lng=${lng}&radius=1500&lang=vi`);
       const data = await res.json();
       if (data.success) {
         setPois(data.data);
