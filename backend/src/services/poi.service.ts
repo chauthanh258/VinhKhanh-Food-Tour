@@ -1,6 +1,8 @@
 import * as poiRepo from '../repositories/poi.repo';
 import * as translationRepo from '../repositories/translation.repo';
 import { AppError } from '../middlewares/error.middleware';
+import { dbLangToGoogleTts, resolvePoiTranslation } from '../utils/language.util';
+import { synthesizeTextToMp3Buffer } from './tts.service';
 
 export const createNewPOI = async (ownerId: string, data: any) => {
   const { lat, lng, translations } = data;
@@ -69,6 +71,7 @@ export const deletePOI = async (poiId: string, userId: string, userRole: string)
 
 export const listNearbyPOIs = async (lat: number, lng: number, radius: number, lang: string) => {
   const allPois = await poiRepo.findAllPOIs({ isActive: true });
+  type ListedPoi = (typeof allPois)[number];
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3;
@@ -82,15 +85,30 @@ export const listNearbyPOIs = async (lat: number, lng: number, radius: number, l
   };
 
   return allPois
-    .map(poi => {
+    .map((poi: ListedPoi) => {
       const distance = getDistance(lat, lng, poi.lat, poi.lng);
-      const translation = poi.translations.find(t => t.language === lang) || poi.translations[0];
+      const translation = resolvePoiTranslation(poi.translations, lang);
       return {
         ...poi,
         distance: Math.round(distance),
-        translation
+        translation,
       };
     })
-    .filter(poi => poi.distance <= radius && poi.translation)
+    .filter((poi) => poi.distance <= radius && poi.translation)
     .sort((a, b) => a.distance - b.distance);
+};
+
+/** MP3 buffer for POI description TTS; text + voice match resolved translation row. */
+export const getPoiDescriptionTtsBuffer = async (poiId: string, uiLang: string): Promise<Buffer> => {
+  const poi = await poiRepo.findPOIById(poiId);
+  if (!poi) {
+    throw new AppError(404, 'POI not found');
+  }
+  const translation = resolvePoiTranslation(poi.translations, uiLang);
+  const text = translation?.description?.trim();
+  if (!translation || !text) {
+    throw new AppError(404, 'No description available for TTS');
+  }
+  const googleLang = dbLangToGoogleTts(translation.language);
+  return synthesizeTextToMp3Buffer(text, googleLang);
 };

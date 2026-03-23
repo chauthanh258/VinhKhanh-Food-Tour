@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { ArrowLeft, Volume2, Info, Navigation, Accessibility } from 'lucide-react';
+import { ArrowLeft, Volume2 } from 'lucide-react';
 import Link from 'next/link';
 
 import BottomNav from '@/app/(app)/tour/components/BottomNav';
 import PlaceList from '@/app/(app)/tour/components/PlaceList';
+import { useUserStore } from '@/store/userStore';
+
+const API_BASE = 'http://localhost:3001';
 
 // Dynamically import Map to avoid SSR issues
 const TourMap = dynamic(() => import('@/app/(app)/tour/components/TourMap'), { 
@@ -31,6 +34,7 @@ interface POI {
 }
 
 export default function TourPage() {
+  const language = useUserStore((s) => s.language);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [pois, setPois] = useState<POI[]>([]);
   const [activePoi, setActivePoi] = useState<POI | null>(null);
@@ -38,10 +42,11 @@ export default function TourPage() {
   const [isGuidanceActive, setIsGuidanceActive] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Fetch nearby POIs
-  const fetchPois = async (lat: number, lng: number) => {
+  const fetchPois = useCallback(async (lat: number, lng: number) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/pois?lat=${lat}&lng=${lng}&radius=1500&lang=vi`);
+      const res = await fetch(
+        `${API_BASE}/api/pois?lat=${lat}&lng=${lng}&radius=1500&lang=${encodeURIComponent(language)}`
+      );
       const data = await res.json();
       if (data.success) {
         setPois(data.data);
@@ -49,11 +54,11 @@ export default function TourPage() {
     } catch (err) {
       console.error('Failed to fetch POIs:', err);
     }
-  };
+  }, [language]);
 
   useEffect(() => {
-    if (!("geolocation" in navigator)) {
-      alert("Trình duyệt không hỗ trợ GPS");
+    if (!('geolocation' in navigator)) {
+      alert('Trình duyệt không hỗ trợ GPS');
       return;
     }
 
@@ -61,22 +66,72 @@ export default function TourPage() {
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserPos([latitude, longitude]);
-        fetchPois(latitude, longitude);
       },
-      (err) => console.error("Geolocation error:", err),
+      (err) => console.error('Geolocation error:', err),
       { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  const handleTriggerAudio = (poi: POI) => {
-    setActivePoi(poi);
-    if (audioRef.current && isGuidanceActive) {
-      audioRef.current.src = poi.translation.audioUrl;
-      audioRef.current.play().catch(e => console.warn("Audio autoplay blocked:", e));
-    }
-  };
+  useEffect(() => {
+    if (!userPos) return;
+    fetchPois(userPos[0], userPos[1]);
+  }, [userPos, language, fetchPois]);
+
+  const handleTriggerAudio = useCallback(
+    (poi: POI) => {
+      setActivePoi(poi);
+      const audio = audioRef.current;
+      if (!audio || !isGuidanceActive) return;
+
+      audio.onended = null;
+      audio.onerror = null;
+
+      const playDescriptionTts = async () => {
+        const desc = poi.translation.description?.trim();
+        if (!desc) return;
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/pois/${poi.id}/description-tts?lang=${encodeURIComponent(language)}`
+          );
+          if (!res.ok) return;
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const revoke = () => URL.revokeObjectURL(blobUrl);
+          audio.onended = () => {
+            revoke();
+            audio.onended = null;
+          };
+          audio.onerror = () => {
+            revoke();
+            audio.onerror = null;
+          };
+          audio.src = blobUrl;
+          await audio.play().catch((e) => console.warn('Description TTS play blocked:', e));
+        } catch (e) {
+          console.warn('Description TTS fetch failed:', e);
+        }
+      };
+
+      const primary = poi.translation.audioUrl?.trim();
+      if (primary) {
+        audio.onended = () => {
+          audio.onended = null;
+          void playDescriptionTts();
+        };
+        audio.onerror = () => {
+          audio.onerror = null;
+          void playDescriptionTts();
+        };
+        audio.src = primary;
+        audio.play().catch((e) => console.warn('Audio autoplay blocked:', e));
+      } else {
+        void playDescriptionTts();
+      }
+    },
+    [isGuidanceActive, language]
+  );
 
   return (
     <div className="flex flex-col h-screen bg-black text-white overflow-hidden">
