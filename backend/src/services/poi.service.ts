@@ -5,7 +5,11 @@ import { dbLangToGoogleTts, normalizeUiLangToDbLang } from '../utils/language.ut
 import { synthesizeTextToMp3Buffer } from './tts.service';
 import { translate } from '@vitalets/google-translate-api';
 
-const translationCache = new Map<string, { text: string; audioBase64: string }>();
+const TRANSLATION_CACHE_TTL_MS = 10_000;
+
+type CachedTranslationTts = { text: string; audioBase64: string; expiresAt: number };
+
+const translationCache = new Map<string, CachedTranslationTts>();
 
 export const createNewPOI = async (ownerId: string, data: any) => {
   const { lat, lng, translations } = data;
@@ -102,8 +106,12 @@ export const listNearbyPOIs = async (lat: number, lng: number, radius: number, _
 /** API endpoint logical handler for translations */
 export const getTranslatedDescriptionAndTts = async (poiId: string, uiLang: string) => {
   const cacheKey = `${poiId}_${uiLang}`;
-  if (translationCache.has(cacheKey)) {
-    return translationCache.get(cacheKey)!;
+  const cached = translationCache.get(cacheKey);
+  if (cached) {
+    if (Date.now() < cached.expiresAt) {
+      return { text: cached.text, audioBase64: cached.audioBase64 };
+    }
+    translationCache.delete(cacheKey);
   }
 
   const poi = await poiRepo.findPOIById(poiId);
@@ -135,6 +143,9 @@ export const getTranslatedDescriptionAndTts = async (poiId: string, uiLang: stri
     text,
     audioBase64: `data:audio/mpeg;base64,${audioBase64}`
   };
-  translationCache.set(cacheKey, result);
+  translationCache.set(cacheKey, {
+    ...result,
+    expiresAt: Date.now() + TRANSLATION_CACHE_TTL_MS
+  });
   return result;
 };
