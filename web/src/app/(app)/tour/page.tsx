@@ -40,6 +40,10 @@ export default function TourPage() {
   const [activePoi, setActivePoi] = useState<POI | null>(null);
   const [activeView, setActiveView] = useState<'map' | 'list' | 'info'>('map');
   const [isGuidanceActive, setIsGuidanceActive] = useState(true);
+  
+  // Audio Queue States
+  const [audioQueue, setAudioQueue] = useState<POI[]>([]);
+  const isPlayingRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const fetchPois = useCallback(async (lat: number, lng: number) => {
@@ -62,10 +66,16 @@ export default function TourPage() {
       return;
     }
 
+    let lastUpdate = 0;
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setUserPos([latitude, longitude]);
+        const now = Date.now();
+        // Throttle GPS updates to 3 seconds minimum to debounce
+        if (now - lastUpdate > 3000) {
+          const { latitude, longitude } = pos.coords;
+          setUserPos([latitude, longitude]);
+          lastUpdate = now;
+        }
       },
       (err) => console.error('Geolocation error:', err),
       { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
@@ -79,59 +89,80 @@ export default function TourPage() {
     fetchPois(userPos[0], userPos[1]);
   }, [userPos, language, fetchPois]);
 
-  const handleTriggerAudio = useCallback(
-    (poi: POI) => {
-      setActivePoi(poi);
-      const audio = audioRef.current;
-      if (!audio || !isGuidanceActive) return;
+  const handleTriggerAudio = useCallback((poi: POI, forcePlay: boolean = false) => {
+    if (!isGuidanceActive) return;
 
-      audio.onended = null;
-      audio.onerror = null;
+    if (forcePlay) {
+      // Tự dừng khi có thông báo khác / người dùng nhấn chọn POI
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      isPlayingRef.current = false;
+      setAudioQueue([poi]); 
+    } else {
+      setAudioQueue((prev: POI[]) => {
+        // Không phát trùng lặp nếu đang phát hoặc đã có trong hàng chờ
+        if (activePoi?.id === poi.id && isPlayingRef.current) return prev;
+        if (prev.find((p: POI) => p.id === poi.id)) return prev;
+        return [...prev, poi];
+      });
+    }
+  }, [activePoi, isGuidanceActive]);
 
-      const playDescriptionTts = async () => {
-        const desc = poi.translation.description?.trim();
-        if (!desc) return;
+  useEffect(() => {
+    if (audioQueue.length > 0 && !isPlayingRef.current && isGuidanceActive) {
+      isPlayingRef.current = true;
+      const nextPoi = audioQueue[0];
+      setAudioQueue((prev: POI[]) => prev.slice(1));
+      
+      const playTts = async () => {
+        setActivePoi(nextPoi);
+        const audio = audioRef.current;
+        if (!audio) {
+          isPlayingRef.current = false;
+          setAudioQueue((prev: POI[]) => [...prev]); // trigger next
+          return;
+        }
+
+        const next = () => {
+          isPlayingRef.current = false;
+          setAudioQueue((prev: POI[]) => [...prev]); // process next in queue
+        };
+
+        audio.onended = next;
+        audio.onerror = next;
+
         try {
-          const res = await fetch(
-            `${API_BASE}/api/pois/${poi.id}/description-tts?lang=${encodeURIComponent(language)}`
-          );
-          if (!res.ok) return;
-          const blob = await res.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          const revoke = () => URL.revokeObjectURL(blobUrl);
-          audio.onended = () => {
-            revoke();
-            audio.onended = null;
-          };
-          audio.onerror = () => {
-            revoke();
-            audio.onerror = null;
-          };
-          audio.src = blobUrl;
-          await audio.play().catch((e) => console.warn('Description TTS play blocked:', e));
-        } catch (e) {
-          console.warn('Description TTS fetch failed:', e);
+          const res = await fetch(`${API_BASE}/api/pois/${nextPoi.id}/translate-tts?lang=${encodeURIComponent(language)}`);
+          if (res.ok) {
+            const data = await res.json();
+            setActivePoi((prev: POI | null) => {
+               if (!prev || prev.id !== nextPoi.id) return prev;
+               return { 
+                 ...prev, 
+                 translation: { 
+                   ...prev.translation, 
+                   description: data.data.text 
+                 } 
+               };
+            });
+            audio.src = data.data.audioBase64;
+            await audio.play().catch((e: Error) => {
+              console.warn('Autoplay blocked:', e);
+              next();
+            });
+          } else {
+            next();
+          }
+        } catch(e: any) {
+          console.warn('Failed to fetch TTS:', e);
+          next();
         }
       };
 
-      const primary = poi.translation.audioUrl?.trim();
-      if (primary) {
-        audio.onended = () => {
-          audio.onended = null;
-          void playDescriptionTts();
-        };
-        audio.onerror = () => {
-          audio.onerror = null;
-          void playDescriptionTts();
-        };
-        audio.src = primary;
-        audio.play().catch((e) => console.warn('Audio autoplay blocked:', e));
-      } else {
-        void playDescriptionTts();
-      }
-    },
-    [isGuidanceActive, language]
-  );
+      void playTts();
+    }
+  }, [audioQueue, isGuidanceActive, language]);
 
   return (
     <div className="flex flex-col h-screen bg-black text-white overflow-hidden">
@@ -161,11 +192,11 @@ export default function TourPage() {
         ) : (
           <PlaceList 
             pois={pois} 
-            onSelectPoi={(poi) => {
-              handleTriggerAudio(poi);
+            onSelectPoi={(poi: POI) => {
+              handleTriggerAudio(poi, true);
               setActiveView('map'); // Switch to map to show where it is
             }} 
-            onTriggerAudio={handleTriggerAudio}
+            onTriggerAudio={(poi: POI) => handleTriggerAudio(poi, true)}
           />
         )}
       </div>

@@ -60,9 +60,9 @@ router.get('/', poiController.getNearbyPOIs);
 
 /**
  * @swagger
- * /pois/{id}/description-tts:
+ * /pois/{id}/translate-tts:
  *   get:
- *     summary: Text-to-speech MP3 for POI description (google-tts-api), language follows query `lang` (UI codes jp/kr supported)
+ *     summary: Get translated description and TTS audio base64 for POI
  *     tags: [POI]
  *     parameters:
  *       - in: path
@@ -74,11 +74,11 @@ router.get('/', poiController.getNearbyPOIs);
  *         schema: { type: string, default: vi }
  *     responses:
  *       200:
- *         description: audio/mpeg
+ *         description: JSON containing translated text and base64 audio
  *       404:
  *         description: POI or description missing
  */
-router.get('/:id/description-tts', poiController.streamDescriptionTts);
+router.get('/:id/translate-tts', poiController.getTranslationAndTts);
 
 /**
  * @swagger

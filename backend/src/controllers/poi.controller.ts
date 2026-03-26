@@ -18,15 +18,14 @@ export const getNearbyPOIs = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-/** Stream MP3: Google TTS for `description` of resolved translation (matches UI language + fallbacks). */
-export const streamDescriptionTts = async (req: Request, res: Response, next: NextFunction) => {
+/** Return JSON with translated text and audioBase64 */
+export const getTranslationAndTts = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const uiLang = (req.query.lang as string) || 'vi';
-    const buffer = await poiService.getPoiDescriptionTtsBuffer(id, uiLang);
-    res.setHeader('Content-Type', 'audio/mpeg');
+    const result = await poiService.getTranslatedDescriptionAndTts(id, uiLang);
     res.setHeader('Cache-Control', 'public, max-age=300');
-    res.send(buffer);
+    sendResponse(res, 200, result);
   } catch (error) {
     next(error);
   }

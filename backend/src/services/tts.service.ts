@@ -1,4 +1,4 @@
-import { getAllAudioUrls } from 'google-tts-api';
+import googleTTS from 'google-tts-api';
 
 const fetchAudioBuffer = async (url: string): Promise<Buffer> => {
   const res = await fetch(url, {
@@ -19,7 +19,43 @@ export const synthesizeTextToMp3Buffer = async (text: string, googleLang: string
   if (!trimmed) {
     throw new Error('Empty text');
   }
-  const parts = getAllAudioUrls(trimmed, { lang: googleLang, slow: false });
-  const buffers = await Promise.all(parts.map((p) => fetchAudioBuffer(p.url)));
+
+  // google-tts-api v0.0.6 giới hạn text < 200 chars cho 1 request.
+  const MAX_CHARS = 200;
+  const chunks: string[] = [];
+
+  const words = trimmed.replace(/\s+/g, ' ').split(' ').filter(Boolean);
+  let current = '';
+
+  for (const word of words) {
+    // Nếu 1 "word" quá dài, tách thẳng theo độ dài.
+    if (word.length > MAX_CHARS) {
+      if (current) {
+        chunks.push(current);
+        current = '';
+      }
+      for (let i = 0; i < word.length; i += MAX_CHARS) {
+        chunks.push(word.slice(i, i + MAX_CHARS));
+      }
+      continue;
+    }
+
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= MAX_CHARS) {
+      current = candidate;
+    } else {
+      if (current) chunks.push(current);
+      current = word;
+    }
+  }
+  if (current) chunks.push(current);
+
+  const buffers = await Promise.all(
+    chunks.map(async (chunk) => {
+      const url = await googleTTS(chunk, googleLang, 1 /* speed */);
+      return fetchAudioBuffer(url);
+    })
+  );
+
   return Buffer.concat(buffers);
 };

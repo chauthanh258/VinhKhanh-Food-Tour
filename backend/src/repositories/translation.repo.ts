@@ -5,13 +5,11 @@ export const createTranslation = async (data: Prisma.POITranslationCreateInput) 
   return prisma.pOITranslation.create({ data });
 };
 
-export const upsertTranslation = async (poiId: string, language: string, data: any) => {
+export const upsertTranslation = async (poiId: string, data: any) => {
   return prisma.pOITranslation.upsert({
-    where: {
-      poiId_language: { poiId, language }
-    },
+    where: { poiId },
     update: data,
-    create: { ...data, poiId, language }
+    create: { ...data, poiId }
   });
 };
 

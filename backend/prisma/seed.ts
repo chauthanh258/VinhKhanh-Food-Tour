@@ -56,16 +56,14 @@ async function main() {
     });
   }
 
-  // 4. Create POIs (500+)
-  console.log('Creating 500+ POIs...');
+  // 4. Create POIs (50)
+  console.log('Creating 50 POIs...');
   const poiNames = [
     'Ốc Oanh', 'Sushi Nhí', 'Lẩu Bò Khu Nhà Cháy', 'Phá Lấu Cô Thảo', 'Bún Mắm 444',
     'Cơm Tấm Ba Ghiền', 'Bánh Mì Huỳnh Hoa', 'Phở Dậu', 'Xôi Gà Bà Chiểu', 'Chè Hà Trâm'
   ];
 
-  const languages = ['vi', 'en', 'ja', 'zh'];
-
-  for (let i = 1; i <= 520; i++) {
+  for (let i = 1; i <= 50; i++) {
     const coords = getRandomCoords();
     const owner = owners[Math.floor(Math.random() * owners.length)];
     const baseName = poiNames[i % poiNames.length] + ' ' + i;
@@ -80,22 +78,17 @@ async function main() {
       },
     });
 
-    // Create 2-4 translations per POI
-    const numTrans = Math.floor(Math.random() * 3) + 2; // 2, 3, or 4
-    for (let j = 0; j < numTrans; j++) {
-      const lang = languages[j];
-      await prisma.pOITranslation.create({
-        data: {
-          poiId: poi.id,
-          language: lang,
-          name: `${baseName} (${lang.toUpperCase()})`,
-          description: `This is a sample description for ${baseName} in ${lang.toUpperCase()}. Delicious food at Vinh Khanh street.`,
-          specialties: 'Seafood, Street food, Local delights',
-          priceRange: '50.000đ - 200.000đ',
-          imageUrl: `https://picsum.photos/seed/${poi.id}-${lang}/800/600`,
-        },
-      });
-    }
+    // Create 1 translation per POI (default Vietnamese)
+    await prisma.pOITranslation.create({
+      data: {
+        poiId: poi.id,
+        name: `${baseName}`,
+        description: `Mô tả mẫu cho ${baseName}. Ở đây chuyên phục vụ các món ngon tuyệt vời tại đường Vĩnh Khánh. Thưởng thức không gian tuyệt vời ở đây nha.`,
+        specialties: 'Hải sản, Món ăn đường phố, Đặc sản địa phương',
+        priceRange: '50.000đ - 200.000đ',
+        imageUrl: `https://picsum.photos/seed/${poi.id}-vi/800/600`,
+      },
+    });
 
     // Create 3-8 menu items per POI
     const numMenu = Math.floor(Math.random() * 6) + 3; // 3 to 8
@@ -103,16 +96,16 @@ async function main() {
       await prisma.menuItem.create({
         data: {
           poiId: poi.id,
-          name: `Special Dish ${k} of ${baseName}`,
+          name: `Món đặc biệt ${k} của ${baseName}`,
           price: getRandom(30000, 150000),
-          description: `Mô tả món ăn đặc biệt số ${k}`,
+          description: `Mô tả món ăn đặc biệt số ${k} vô cùng hấp dẫn.`,
           imageUrl: `https://picsum.photos/seed/menu-${poi.id}-${k}/400/300`,
           isAvailable: true,
         },
       });
     }
 
-    if (i % 50 === 0) console.log(`  Added ${i} POIs...`);
+    if (i % 10 === 0) console.log(`  Added ${i} POIs...`);
   }
 
   console.log('✅ Seeding finished successfully!');
