@@ -18,15 +18,26 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setAuth(
-        { id: "1", email, fullName: "Test User", role: "USER" },
-        "mock-token"
-      );
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setAuth(result.data.user, result.data.token);
+        router.push("/");
+      } else {
+        alert(result.message || "Đăng nhập thất bại");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("Đã có lỗi xảy ra");
+    } finally {
       setIsLoading(false);
-      router.push("/");
-    }, 1500);
+    }
   };
 
   const loginWithGoogle = useGoogleLogin({
@@ -43,7 +54,7 @@ export default function LoginPage() {
         
         // Mock successful Google login
         setAuth(
-          { id: "1", email: "google-user@example.com", fullName: "Google User", role: "USER" },
+          { id: "1", email: "google-user@example.com", fullName: "Google User", role: "USER", language: "vi", isOnboarded: false },
           "mock-google-token"
         );
         router.push("/");

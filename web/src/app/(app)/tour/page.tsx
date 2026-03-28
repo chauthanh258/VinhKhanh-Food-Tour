@@ -3,9 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { ArrowLeft, Volume2 } from 'lucide-react';
-import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 
-import BottomNav from '@/app/(app)/tour/components/BottomNav';
 import PlaceList from '@/app/(app)/tour/components/PlaceList';
 import { useUserStore } from '@/store/userStore';
 
@@ -35,10 +34,13 @@ interface POI {
 
 export default function TourPage() {
   const language = useUserStore((s) => s.language);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const activeView = searchParams.get('view') || 'map';
+  
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [pois, setPois] = useState<POI[]>([]);
   const [activePoi, setActivePoi] = useState<POI | null>(null);
-  const [activeView, setActiveView] = useState<'map' | 'list' | 'info'>('map');
   const [isGuidanceActive, setIsGuidanceActive] = useState(true);
   
   // Audio Queue States
@@ -70,7 +72,6 @@ export default function TourPage() {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const now = Date.now();
-        // Throttle GPS updates to 3 seconds minimum to debounce
         if (now - lastUpdate > 3000) {
           const { latitude, longitude } = pos.coords;
           setUserPos([latitude, longitude]);
@@ -93,7 +94,6 @@ export default function TourPage() {
     if (!isGuidanceActive) return;
 
     if (forcePlay) {
-      // Tự dừng khi có thông báo khác / người dùng nhấn chọn POI
       if (audioRef.current) {
         audioRef.current.pause();
       }
@@ -101,7 +101,6 @@ export default function TourPage() {
       setAudioQueue([poi]); 
     } else {
       setAudioQueue((prev: POI[]) => {
-        // Không phát trùng lặp nếu đang phát hoặc đã có trong hàng chờ
         if (activePoi?.id === poi.id && isPlayingRef.current) return prev;
         if (prev.find((p: POI) => p.id === poi.id)) return prev;
         return [...prev, poi];
@@ -120,13 +119,13 @@ export default function TourPage() {
         const audio = audioRef.current;
         if (!audio) {
           isPlayingRef.current = false;
-          setAudioQueue((prev: POI[]) => [...prev]); // trigger next
+          setAudioQueue((prev) => [...prev]); 
           return;
         }
 
         const next = () => {
           isPlayingRef.current = false;
-          setAudioQueue((prev: POI[]) => [...prev]); // process next in queue
+          setAudioQueue((prev) => [...prev]); 
         };
 
         audio.onended = next;
@@ -136,7 +135,7 @@ export default function TourPage() {
           const res = await fetch(`${API_BASE}/api/pois/${nextPoi.id}/translate-tts?lang=${encodeURIComponent(language)}`);
           if (res.ok) {
             const data = await res.json();
-            setActivePoi((prev: POI | null) => {
+            setActivePoi((prev) => {
                if (!prev || prev.id !== nextPoi.id) return prev;
                return { 
                  ...prev, 
@@ -147,14 +146,14 @@ export default function TourPage() {
                };
             });
             audio.src = data.data.audioBase64;
-            await audio.play().catch((e: Error) => {
+            await audio.play().catch((e) => {
               console.warn('Autoplay blocked:', e);
               next();
             });
           } else {
             next();
           }
-        } catch(e: any) {
+        } catch(e) {
           console.warn('Failed to fetch TTS:', e);
           next();
         }
@@ -169,10 +168,7 @@ export default function TourPage() {
       {/* Header Overlay */}
       {activePoi && activeView === 'map' && (
       <header className="absolute top-0 left-0 right-0 z-50 p-4 pointer-events-none">
-        <div className="flex items-center justify-between pointer-events-auto">
-          <Link href="/" className="bg-black/40 backdrop-blur-md p-3 rounded-2xl border border-white/10 text-white hover:bg-black/60 transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
+        <div className="flex items-center justify-end pointer-events-auto">
           <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             <span className="text-[10px] font-bold uppercase tracking-wider">GPS Active</span>
@@ -192,18 +188,18 @@ export default function TourPage() {
         ) : (
           <PlaceList 
             pois={pois} 
-            onSelectPoi={(poi: POI) => {
+            onSelectPoi={(poi) => {
               handleTriggerAudio(poi, true);
-              setActiveView('map'); // Switch to map to show where it is
+              router.push('/tour'); 
             }} 
-            onTriggerAudio={(poi: POI) => handleTriggerAudio(poi, true)}
+            onTriggerAudio={(poi) => handleTriggerAudio(poi, true)}
           />
         )}
       </div>
 
       {/* POI Info / Audio Player Overlay */}
       {activePoi && activeView === 'map' && (
-        <div className="absolute bottom-24 left-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="absolute bottom-32 left-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-3xl p-5 shadow-2xl flex flex-col gap-4">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
@@ -238,8 +234,6 @@ export default function TourPage() {
 
       {/* Hidden Audio Element */}
       <audio ref={audioRef} />
-
-      <BottomNav activeView={activeView} onViewChange={setActiveView} />
     </div>
   );
 }
