@@ -18,6 +18,19 @@ export const getNearbyPOIs = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+/** Return JSON with translated text and audioBase64 */
+export const getTranslationAndTts = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const uiLang = (req.query.lang as string) || 'vi';
+    const result = await poiService.getTranslatedDescriptionAndTts(id, uiLang);
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    sendResponse(res, 200, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPOIDetails = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;

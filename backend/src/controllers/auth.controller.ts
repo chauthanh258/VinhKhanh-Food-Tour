@@ -42,3 +42,13 @@ export const googleLogin = async (req: Request, res: Response, next: NextFunctio
     next(error);
   }
 };
+
+export const updateProfile = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const result = await authService.updateProfile(userId, req.body);
+    sendResponse(res, 200, result, 'Profile updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};

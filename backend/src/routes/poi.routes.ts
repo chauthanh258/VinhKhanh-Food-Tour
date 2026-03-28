@@ -60,6 +60,28 @@ router.get('/', poiController.getNearbyPOIs);
 
 /**
  * @swagger
+ * /pois/{id}/translate-tts:
+ *   get:
+ *     summary: Get translated description and TTS audio base64 for POI
+ *     tags: [POI]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *       - in: query
+ *         name: lang
+ *         schema: { type: string, default: vi }
+ *     responses:
+ *       200:
+ *         description: JSON containing translated text and base64 audio
+ *       404:
+ *         description: POI or description missing
+ */
+router.get('/:id/translate-tts', poiController.getTranslationAndTts);
+
+/**
+ * @swagger
  * /pois/{id}:
  *   get:
  *     summary: Get detailed information of a specific POI

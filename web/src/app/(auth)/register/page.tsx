@@ -19,17 +19,26 @@ export default function RegisterPage() {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // Mock successful registration
-      setAuth(
-        { id: "1", email, fullName, role: "USER" },
-        "mock-token"
-      );
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName, role: 'USER' }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setAuth(result.data.user, result.data.token);
+        router.push("/onboarding");
+      } else {
+        alert(result.message || "Đăng ký thất bại");
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      alert("Đã có lỗi xảy ra");
+    } finally {
       setIsLoading(false);
-      // Redirect to onboarding for new users as requested
-      router.push("/onboarding"); 
-    }, 1500);
+    }
   };
 
   const loginWithGoogle = useGoogleLogin({
@@ -38,7 +47,7 @@ export default function RegisterPage() {
       try {
         // Mock successful Google login
         setAuth(
-          { id: "1", email: "google-user@example.com", fullName: "Google User", role: "USER" },
+          { id: "1", email: "google-user@example.com", fullName: "Google User", role: "USER", language: "vi", isOnboarded: false },
           "mock-google-token"
         );
         router.push("/onboarding"); // New user from Google

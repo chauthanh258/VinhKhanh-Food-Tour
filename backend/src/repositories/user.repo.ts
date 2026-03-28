@@ -19,9 +19,9 @@ export const findAllUsers = async () => {
   });
 };
 
-export const updateUserRole = async (id: string, role: Role) => {
+export const updateUser = async (id: string, data: Prisma.UserUpdateInput) => {
   return prisma.user.update({
     where: { id },
-    data: { role }
+    data
   });
 };

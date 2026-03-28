@@ -168,4 +168,28 @@ router.get('/me', authenticate, authController.getMe);
  */
 router.post('/google', authController.googleLogin);
 
+/**
+ * @swagger
+ * /auth/profile:
+ *   patch:
+ *     summary: Update user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName: { type: string }
+ *               language: { type: string }
+ *               isOnboarded: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ */
+router.patch('/profile', authenticate, authController.updateProfile);
+
 export default router;

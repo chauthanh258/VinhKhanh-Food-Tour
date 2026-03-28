@@ -5,14 +5,17 @@ export const metadata: Metadata = {
   description: "Explore the best street food in District 4",
 };
 
+import BottomNav from "@/components/shared/BottomNav";
+
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-black w-lg mx-auto relative">
+    <div className="min-h-screen flex flex-col bg-black w-full max-w-lg mx-auto relative pb-20">
       {children}
+      <BottomNav />
     </div>
   );
 }
