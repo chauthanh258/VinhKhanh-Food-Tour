@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, User, Music } from 'lucide-react';
@@ -27,6 +27,18 @@ const PoiIcon = L.divIcon({
   iconSize: [32, 32],
   iconAnchor: [16, 32],
 });
+
+// Component to handle map clicks for demo positioning
+function MapClickHandler({ onMapClick }: { onMapClick?: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      if (onMapClick) {
+        onMapClick(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  return null;
+}
 
 // Component to handle map centering and auto-zoom
 function MapTracker({ pos }: { pos: [number, number] | null }) {
@@ -59,9 +71,10 @@ interface TourMapProps {
   userPos: [number, number] | null;
   pois: POI[];
   onTriggerAudio: (poi: POI) => void;
+  onMapClick?: (lat: number, lng: number) => void;
 }
 
-export default function TourMap({ userPos, pois, onTriggerAudio }: TourMapProps) {
+export default function TourMap({ userPos, pois, onTriggerAudio, onMapClick }: TourMapProps) {
   const visitedPois = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -87,8 +100,10 @@ export default function TourMap({ userPos, pois, onTriggerAudio }: TourMapProps)
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
+
+        <MapClickHandler onMapClick={onMapClick} />
 
         {userPos && (
           <>

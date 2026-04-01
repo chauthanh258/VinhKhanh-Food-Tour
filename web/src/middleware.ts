@@ -7,7 +7,12 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. If trying to access protected routes without token
-  const isProtectedRoute = pathname.startsWith('/tour') || pathname.startsWith('/dashboard') || pathname.startsWith('/settings') || pathname === '/';
+  const isProtectedRoute = 
+    pathname.startsWith('/tour') || 
+    pathname.startsWith('/admin') || 
+    pathname.startsWith('/owner') ||
+    pathname.startsWith('/settings') || 
+    pathname === '/';
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
 
   const isValidToken = token && token !== 'undefined' && token !== 'null' && token !== '';
@@ -18,24 +23,52 @@ export function middleware(request: NextRequest) {
 
   // 2. If logged in and trying to access login/register
   if (isValidToken && isAuthRoute) {
-    return NextResponse.redirect(new URL('/tour', request.url));
+    // Default redirect based on role
+    if (role === 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    } else if (role === 'OWNER') {
+      return NextResponse.redirect(new URL('/owner', request.url));
+    } else {
+      return NextResponse.redirect(new URL('/tour', request.url));
+    }
   }
 
-  // 3. Redirect / to /tour if logged in
+  // 3. Redirect / to appropriate section based on role if logged in
   if (isValidToken && pathname === '/') {
-    return NextResponse.redirect(new URL('/tour', request.url));
+    if (role === 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    } else if (role === 'OWNER') {
+      return NextResponse.redirect(new URL('/owner', request.url));
+    } else {
+      return NextResponse.redirect(new URL('/tour', request.url));
+    }
   }
 
-  // 3. RBAC: Regular users trying to access dashboard (admin role required)
-  if (token && pathname.startsWith('/dashboard') && role !== 'ADMIN' && role !== 'OWNER') {
-    return NextResponse.redirect(new URL('/', request.url));
+  // 4. RBAC: Restrict access based on role
+  const roleNormalized = role ? (role).toLowerCase() : '';
+
+  if (token) {
+    // Prevent owners from accessing admin area (explicit)
+    if (role === 'OWNER' && pathname.startsWith('/admin')) {
+      return NextResponse.redirect(new URL(`/${roleNormalized}`, request.url));
+    }
+
+    // Prevent admins from accessing owner area (explicit)
+    if (role === 'ADMIN' && pathname.startsWith('/owner')) {
+      return NextResponse.redirect(new URL(`/${roleNormalized}`, request.url));
+    }
+    // If a non-OWNER tries to access owner pages -> redirect to /tour
+    if (pathname.startsWith('/owner') && role !== 'OWNER') {
+      return NextResponse.redirect(new URL('/tour', request.url));
+    }
+
+    // If a non-ADMIN tries to access admin pages -> redirect to /tour
+    if (pathname.startsWith('/admin') && role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/tour', request.url));
+    }
+
   }
 
-  // 4. Onboarding check: If logged in but not onboarded, redirect to /onboarding
-  // Note: We need to be careful not to redirect if already on /onboarding
-  // Also, we can't easily check isOnboarded field from store in middleware
-  // So we might need to store it in a cookie too, or just let the page handle it.
-  // For now, I'll assume the onboarding page is accessible if the user is logged in.
 
   return NextResponse.next();
 }
