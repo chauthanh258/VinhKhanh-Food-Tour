@@ -13,7 +13,7 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col bg-black w-full max-w-lg mx-auto relative pb-20">
+    <div className="min-h-screen flex flex-col bg-black w-full max-w-lg mx-auto relative">
       {children}
       <BottomNav />
     </div>

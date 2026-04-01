@@ -1,39 +1,108 @@
-import type { Metadata } from "next";
+'use client';
 
-export const metadata: Metadata = {
-  title: "VinhKhanh System Admin",
-};
+import type { Metadata } from "next";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LayoutDashboard, Layers, Settings as SettingsIcon, Menu, X, MapPin, Users, History } from "lucide-react";
+import { useState } from "react";
+import NotificationBell from "./components/NotificationBell";
+
+// export const metadata: Metadata = {
+//   title: "VinhKhanh System Admin",
+// };
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const navItems = [
+    { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/admin/categories', icon: Layers, label: 'Danh mục' },
+    { href: '/admin/pois', icon: MapPin, label: 'Quản lý POI' },
+    { href: '/admin/users', icon: Users, label: 'Người dùng' },
+    { href: '/admin/audit-logs', icon: History, label: 'Audit Logs' },
+    { href: '/admin/settings', icon: SettingsIcon, label: 'Cài đặt' },
+  ];
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex">
-      {/* Sidebar - Admin Purple Theme */}
-      <aside className="w-64 border-r border-white/5 p-6 hidden md:block">
-        <h1 className="text-xl font-bold mb-8 text-purple-500 tracking-tighter uppercase">Admin Core</h1>
-        <nav className="space-y-4 text-xs font-bold uppercase tracking-widest">
-          <div className="text-white hover:text-purple-500 cursor-pointer transition-colors bg-purple-500/10 px-4 py-3 rounded-xl border border-purple-500/20">Overview</div>
-          <div className="text-zinc-500 hover:text-white cursor-pointer transition-colors px-4 py-3">POIs Management</div>
-          <div className="text-zinc-500 hover:text-white cursor-pointer transition-colors px-4 py-3">User Control</div>
-          <div className="text-zinc-500 hover:text-white cursor-pointer transition-colors px-4 py-3">Audit Logs</div>
-          <div className="text-zinc-500 hover:text-white cursor-pointer transition-colors px-4 py-3 pt-12 font-bold">Settings</div>
+    <div className="h-screen bg-background flex">
+      {/* Sidebar */}
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} border-r border-border bg-secondary transition-all duration-300 hidden md:flex flex-col`}>
+        {/* Logo */}
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold">V</div>
+            {sidebarOpen && <span className="font-bold text-lg text-foreground">Admin</span>}
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2">
+          {navItems.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                isActive(item.href)
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted/30'
+              }`}
+            >
+              <item.icon size={20} />
+              {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+            </Link>
+          ))}
         </nav>
+
+        {/* Sidebar Toggle */}
+        <div className="p-4 border-t border-border">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-muted/30 transition-colors"
+          >
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </aside>
-      
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-h-0 bg-black">
-        <header className="h-16 border-b border-white/5 flex items-center px-8 justify-between">
-           <h2 className="font-bold text-zinc-500">System <span className="text-white">Administration</span></h2>
-           <div className="flex items-center gap-4">
-              <span className="text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/10 uppercase">System Online</span>
-              <div className="w-8 h-8 rounded-full bg-purple-600 border border-white/10 flex items-center justify-center text-[10px] font-bold shadow-xl">SU</div>
-           </div>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col h-full">
+        {/* Header */}
+        <header className="border-b border-border bg-secondary sticky top-0 z-40">
+          <div className="h-16 px-8 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="md:hidden p-2 hover:bg-muted/30 rounded-lg"
+              >
+                <Menu size={20} />
+              </button>
+              <h2 className="font-bold text-foreground">
+                Hệ thống <span className="text-primary">Quản trị</span>
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+                ● Hệ thống hoạt động
+              </div>
+              <NotificationBell />
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-foreground">
+                AD
+              </div>
+            </div>
+          </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-8">
-           {children}
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-8 bg-[#0f172a]">
+          {children}
         </div>
       </main>
     </div>
