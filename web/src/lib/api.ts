@@ -28,6 +28,7 @@ async function fetcher(endpoint: string, options: RequestInit = {}) {
 export const api = {
   get: (endpoint: string) => fetcher(endpoint, { method: 'GET' }),
   post: (endpoint: string, body: any) => fetcher(endpoint, { method: 'POST', body: JSON.stringify(body) }),
+  put: (endpoint: string, body: any) => fetcher(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
   patch: (endpoint: string, body: any) => fetcher(endpoint, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (endpoint: string) => fetcher(endpoint, { method: 'DELETE' }),
 };

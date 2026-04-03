@@ -5,7 +5,7 @@ import { dbLangToGoogleTts, normalizeUiLangToDbLang } from '../utils/language.ut
 import { synthesizeTextToMp3Buffer } from './tts.service';
 import { translate } from '@vitalets/google-translate-api';
 
-const TRANSLATION_CACHE_TTL_MS = 10_000;
+const TRANSLATION_CACHE_TTL_MS = 10;
 
 type CachedTranslationTts = { text: string; audioBase64: string; expiresAt: number };
 
@@ -71,6 +71,19 @@ export const deletePOI = async (poiId: string, userId: string, userRole: string)
   }
 
   return poiRepo.deletePOI(poiId);
+};
+
+export const listOwnerPOIs = async (
+  ownerId: string,
+  filters: {
+    search?: string;
+    status?: 'all' | 'active' | 'hidden';
+    page?: number;
+    limit?: number;
+  } = {}
+) => {
+  const result = await poiRepo.findPOIsByOwnerWithFilters(ownerId, filters);
+  return result;
 };
 
 export const listNearbyPOIs = async (lat: number, lng: number, radius: number, _lang: string) => {
