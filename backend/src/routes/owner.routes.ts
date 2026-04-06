@@ -47,4 +47,18 @@ router.get('/:ownerId/pois', authenticate, authorize(['OWNER', 'ADMIN']), ownerC
  */
 router.get('/owners/analytics', authenticate, authorize(['OWNER', 'ADMIN']), ownerController.getOwnerAnalytics);
 
+/**
+ * @swagger
+ * /owners/dashboard:
+ *   get:
+ *     summary: Get dashboard data for authenticated owner
+ *     tags: [Owner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dashboard stats, chart and recent activities
+ */
+router.get('/owners/dashboard', authenticate, authorize(['OWNER', 'ADMIN']), ownerController.getOwnerDashboard);
+
 export default router;
