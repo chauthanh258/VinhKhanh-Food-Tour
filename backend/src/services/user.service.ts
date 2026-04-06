@@ -11,5 +11,5 @@ export const updateRole = async (userId: string, role: Role) => {
   if (!user) {
     throw new AppError(404, 'User not found');
   }
-  return userRepo.updateUserRole(userId, role);
+  return userRepo.updateUser(userId, { role });
 };
