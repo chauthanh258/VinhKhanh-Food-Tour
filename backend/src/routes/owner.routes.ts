@@ -33,4 +33,18 @@ const router = Router();
  */
 router.get('/:ownerId/pois', authenticate, authorize(['OWNER', 'ADMIN']), ownerController.getOwnerPOIs);
 
+/**
+ * @swagger
+ * /owners/analytics:
+ *   get:
+ *     summary: Get analytics dashboard data for authenticated owner
+ *     tags: [Owner]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Analytics summary and chart data
+ */
+router.get('/owners/analytics', authenticate, authorize(['OWNER', 'ADMIN']), ownerController.getOwnerAnalytics);
+
 export default router;
