@@ -296,20 +296,14 @@ function PoiAudioDrawer({ poi, isGuidanceActive, onToggleGuidance, onClose, onSk
               {/* Description - scrollable */}
               <div className="relative">
                 <div
-                  className="overflow-y-auto min-h-48 max-h-60 pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
+                  className="overflow-y-auto py-6 max-h-60 pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent"
                   style={{ scrollbarWidth: 'thin' }}
                 >
+                  <p>Mô tả:</p>
                   <p
                     ref={descRef}
                     className="text-zinc-400 text-sm leading-relaxed"
                   >
-                    {poi.translation.description}
-                    {poi.translation.description}
-                    {poi.translation.description}
-                    {poi.translation.description}
-                    {poi.translation.description}
-                    {poi.translation.description}
-                    {poi.translation.description}
                     {poi.translation.description}
                   </p>
                 </div>

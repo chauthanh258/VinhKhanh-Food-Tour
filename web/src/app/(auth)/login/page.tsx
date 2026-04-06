@@ -57,7 +57,9 @@ export default function LoginPage() {
           { id: "1", email: "google-user@example.com", fullName: "Google User", role: "USER", language: "vi", isOnboarded: false },
           "mock-google-token"
         );
-        router.push("/");
+        // router.push("/");
+        console.log("Google login success");
+        console.log(tokenResponse);
       } catch (error) {
         console.error("Google login failed:", error);
       } finally {
@@ -70,7 +72,7 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 w-full">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-orange-400 to-yellow-300 bg-clip-text text-transparent">
           Chào mừng trở lại
@@ -135,7 +137,7 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <div className="relative py-2">
+      {/* <div className="relative py-2">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-zinc-800"></div>
         </div>
@@ -151,7 +153,7 @@ export default function LoginPage() {
       >
         <Chrome className="w-5 h-5" /> 
         Tiếp tục với Google
-      </button>
+      </button> */}
 
       <p className="text-center text-zinc-500 mt-4">
         Chưa có tài khoản?{" "}

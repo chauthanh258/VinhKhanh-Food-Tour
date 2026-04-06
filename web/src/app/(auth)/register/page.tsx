@@ -140,7 +140,7 @@ export default function RegisterPage() {
         </button>
       </form>
 
-      <div className="relative py-2">
+      {/* <div className="relative py-2">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-zinc-800"></div>
         </div>
@@ -155,7 +155,7 @@ export default function RegisterPage() {
       >
         <Chrome className="w-5 h-5" /> 
         Tiếp tục với Google
-      </button>
+      </button> */}
 
       <p className="text-center text-zinc-500 mt-4">
         Đã có tài khoản?{" "}
