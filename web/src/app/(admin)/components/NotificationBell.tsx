@@ -1,45 +1,56 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Bell, Check, Info, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bell, Check, Info, AlertTriangle, CheckCircle, X } from 'lucide-react';
 import { Card, Button, Badge } from './shared-components';
+import { useAuditStore } from '@/store';
 
-interface Notification {
-  id: number;
-  type: 'info' | 'warning' | 'success' | 'error';
-  title: string;
-  message: string;
-  isRead: boolean;
-  timestamp: string;
-}
+const getActionLabel = (action: string) => {
+  const actionMap: Record<string, string> = {
+    CREATE_CATEGORY: 'Tạo danh mục',
+    UPDATE_CATEGORY: 'Sửa danh mục',
+    DELETE_CATEGORY: 'Xóa danh mục',
+    RESTORE_CATEGORY: 'Khôi phục danh mục',
+    CREATE_POI: 'Tạo POI',
+    UPDATE_POI: 'Sửa POI',
+    DELETE_POI: 'Xóa POI',
+    UPDATE_POI_STATUS: 'Đổi trạng thái POI',
+    UPDATE_USER_STATUS: 'Đổi trạng thái user',
+    SOFT_DELETE_USER: 'Xóa user',
+  };
+  return actionMap[action] || action;
+};
 
-const initialNotifications: Notification[] = [
-  { id: 1, type: 'success', title: 'POI mới được thêm', message: 'Quán ốc hương mới đã được thêm vào hệ thống', isRead: false, timestamp: '2 phút trước' },
-  { id: 2, type: 'warning', title: 'Cần cập nhật', message: 'Một số POI chưa có dữ liệu multimedia', isRead: false, timestamp: '1 giờ trước' },
-  { id: 3, type: 'info', title: 'Thông báo hệ thống', message: 'Sao lưu dữ liệu đã hoàn tất', isRead: true, timestamp: '3 giờ trước' },
-  { id: 4, type: 'error', title: 'Lỗi đồng bộ', message: 'Không thể đồng bộ dữ liệu với máy chủ', isRead: true, timestamp: '5 giờ trước' },
-];
+const getActionType = (action: string): 'success' | 'warning' | 'info' => {
+  if (action.startsWith('CREATE') || action.startsWith('RESTORE')) return 'success';
+  if (action.startsWith('DELETE') || action.startsWith('SOFT_DELETE')) return 'warning';
+  return 'info';
+};
 
 const NotificationBell = () => {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const { logs, fetchLogs } = useAuditStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [readLogs, setReadLogs] = useState<Set<string>>(new Set());
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  useEffect(() => {
+    fetchLogs({ skip: 0, take: 10, force: true });
+  }, []);
+
+  const unreadCount = logs.filter(log => !readLogs.has(log.id)).length;
 
   const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    setReadLogs(new Set(logs.map(log => log.id)));
   };
 
-  const dismissNotification = (id: number) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  const dismissNotification = (id: string) => {
+    setReadLogs(prev => new Set([...prev, id]));
   };
 
-  const getIcon = (type: string) => {
+  const getIcon = (type: 'success' | 'warning' | 'info') => {
     switch (type) {
       case 'info': return <Info size={16} className="text-blue-500" />;
       case 'warning': return <AlertTriangle size={16} className="text-yellow-500" />;
       case 'success': return <CheckCircle size={16} className="text-emerald-500" />;
-      case 'error': return <XCircle size={16} className="text-red-500" />;
       default: return <Info size={16} className="text-blue-500" />;
     }
   };
@@ -68,7 +79,7 @@ const NotificationBell = () => {
           />
           <Card className="absolute right-0 top-full mt-2 w-96 z-50 shadow-lg max-h-96 overflow-y-auto">
             <div className="flex items-center justify-between sticky top-0 bg-secondary -m-6 mb-4 p-6">
-              <h3 className="font-bold text-foreground">Thông báo</h3>
+              <h3 className="font-bold text-foreground">Thông báo hoạt động</h3>
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"
@@ -83,38 +94,46 @@ const NotificationBell = () => {
             </div>
 
             <div className="space-y-2">
-              {notifications.length === 0 ? (
+              {logs.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">Không có thông báo</p>
               ) : (
-                notifications.map(notif => (
-                  <div
-                    key={notif.id}
-                    className={`p-4 rounded-lg border ${
-                      notif.isRead
-                        ? 'bg-transparent border-border'
-                        : 'bg-primary/10 border-primary/20'
-                    }`}
-                  >
-                    <div className="flex gap-3">
-                      <div className="pt-1">
-                        {getIcon(notif.type)}
+                logs.map(log => {
+                  const actionType = getActionType(log.action);
+                  const isRead = readLogs.has(log.id);
+                  return (
+                    <div
+                      key={log.id}
+                      className={`p-4 rounded-lg border ${
+                        isRead
+                          ? 'bg-transparent border-border'
+                          : 'bg-primary/10 border-primary/20'
+                      }`}
+                    >
+                      <div className="flex gap-3">
+                        <div className="pt-1">
+                          {getIcon(actionType)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-foreground">{getActionLabel(log.action)}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Admin: {log.admin?.fullName || log.admin?.email || 'N/A'}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {new Date(log.createdAt).toLocaleString('vi-VN')}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => dismissNotification(log.id)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
+                        >
+                          <X size={16} />
+                        </Button>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-foreground">{notif.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{notif.message}</p>
-                        <p className="text-xs text-muted-foreground mt-2">{notif.timestamp}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => dismissNotification(notif.id)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                      >
-                        ✕
-                      </Button>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </Card>

@@ -5,8 +5,7 @@ import { dbLangToGoogleTts, normalizeUiLangToDbLang } from '../utils/language.ut
 import { synthesizeTextToMp3Buffer } from './tts.service';
 import { translate } from '@vitalets/google-translate-api';
 
-const TRANSLATION_CACHE_TTL_MS = 10;
-
+const TRANSLATION_CACHE_TTL_MS = 10_000;
 type CachedTranslationTts = { text: string; audioBase64: string; expiresAt: number };
 
 const translationCache = new Map<string, CachedTranslationTts>();

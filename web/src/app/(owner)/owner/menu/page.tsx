@@ -4,11 +4,13 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   Plus,
   Search,
+  Filter,
   Edit2,
   Trash2,
   Utensils,
   Coffee,
   IceCream,
+  MoreHorizontal,
   CheckCircle2,
   XCircle,
   Upload,
@@ -313,7 +315,6 @@ export default function MenuManagement() {
                 {item.isAvailable ? "Available" : "Sold Out"}
               </div>
             </div>
-
             <div className="p-6 flex-1 flex flex-col">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <h3 className="font-bold text-gray-900 dark:text-white text-lg leading-snug group-hover:text-orange-600 transition-colors">
