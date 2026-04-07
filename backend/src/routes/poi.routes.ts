@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as poiController from '../controllers/poi.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { poiImageUpload } from '../middlewares/upload.middleware';
 
 const router = Router();
 
@@ -108,6 +109,30 @@ router.get('/', poiController.getNearbyPOIs);
  *                         totalPages: { type: number }
  */
 router.get('/owner/list', authenticate, authorize(['OWNER', 'ADMIN']), poiController.getOwnerPOIs);
+
+/**
+ * @swagger
+ * /pois/upload-image:
+ *   post:
+ *     summary: Upload a POI image
+ *     tags: [Owner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Image uploaded successfully
+ */
+router.post('/upload-image', authenticate, authorize(['OWNER', 'ADMIN']), poiImageUpload.single('image'), poiController.uploadPOIImage);
 
 /**
  * @swagger
