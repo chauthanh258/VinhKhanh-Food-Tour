@@ -4,13 +4,18 @@ import poiRoutes from './poi.routes';
 import ownerRoutes from './owner.routes';
 import adminRoutes from './admin.routes';
 import menuItemRoutes from './menuItem.routes';
+import categoryRoutes from './category.routes';
 
 const router = Router();
 
 router.use('/auth', authRoutes);
 router.use('/pois', poiRoutes);
-router.use('/', ownerRoutes); // Using '/' because it has owners/:ownerId/pois
+// router.use('/', ownerRoutes); // Using '/' because it has owners/:ownerId/pois
+// router.use('/admin', adminRoutes);
+// router.use('/', menuItemRoutes); // Using '/' because it has pois/:poiId/menu-items and menu-items/:id
 router.use('/admin', adminRoutes);
-router.use('/', menuItemRoutes); // Using '/' because it has pois/:poiId/menu-items and menu-items/:id
+router.use('/admin', categoryRoutes);
+router.use('/', ownerRoutes);
+router.use('/', menuItemRoutes);
 
 export default router;

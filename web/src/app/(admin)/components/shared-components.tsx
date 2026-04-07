@@ -31,9 +31,9 @@ export const Button = React.forwardRef<
 >(({ className, variant = 'primary', size = 'md', ...props }, ref) => {
   const variants = {
     primary: "bg-primary text-primary-foreground hover:bg-primary/90",
-    secondary: "bg-muted text-foreground hover:bg-muted/80",
-    outline: "border border-border bg-transparent hover:bg-secondary",
-    ghost: "bg-transparent hover:bg-secondary",
+    secondary: "bg-surface text-foreground hover:bg-surface/80 border border-border",
+    outline: "border-2 border-primary/50 bg-transparent hover:bg-primary/10 text-primary-foreground",
+    ghost: "bg-transparent hover:bg-white/10 text-foreground",
     danger: "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20"
   };
 
@@ -67,7 +67,7 @@ export const Input = React.forwardRef<
   <input
     ref={ref}
     className={cn(
-      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50",
+      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:border-primary transition-all duration-200 caret-primary cursor-text disabled:cursor-not-allowed disabled:opacity-50",
       className
     )}
     {...props}
@@ -83,7 +83,7 @@ export const Textarea = React.forwardRef<
   <textarea
     ref={ref}
     className={cn(
-      "flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50",
+      "flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:border-primary transition-all duration-200 caret-primary cursor-text disabled:cursor-not-allowed disabled:opacity-50",
       className
     )}
     {...props}
@@ -107,7 +107,7 @@ export const Select = ({
     value={value}
     onChange={(e) => onChange(e.target.value)}
     className={cn(
-      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:border-primary transition-all duration-200 cursor-pointer",
       className
     )}
   >
@@ -166,7 +166,7 @@ export const Dialog = ({
             <span className="text-xl">✕</span>
           </Button>
         </div>
-        <div className="p-6">
+        <div className="p-6 max-h-[80vh] overflow-y-auto">
           {children}
         </div>
       </div>

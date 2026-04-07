@@ -60,6 +60,57 @@ router.get('/', poiController.getNearbyPOIs);
 
 /**
  * @swagger
+ * /pois/owner/list:
+ *   get:
+ *     summary: Get owner's POIs with search and filter (all, active, hidden)
+ *     tags: [Owner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *         description: Search by POI name, description, or specialties
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [all, active, hidden], default: all }
+ *         description: Filter by POI status (all, active, or hidden)
+ *       - in: query
+ *         name: page
+ *         schema: { type: number, default: 1 }
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema: { type: number, default: 10 }
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: List of owner's POIs with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     data:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page: { type: number }
+ *                         limit: { type: number }
+ *                         total: { type: number }
+ *                         totalPages: { type: number }
+ */
+router.get('/owner/list', authenticate, authorize(['OWNER', 'ADMIN']), poiController.getOwnerPOIs);
+
+/**
+ * @swagger
  * /pois/{id}/translate-tts:
  *   get:
  *     summary: Get translated description and TTS audio base64 for POI

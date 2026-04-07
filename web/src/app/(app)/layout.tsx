@@ -6,6 +6,7 @@ export const metadata: Metadata = {
 };
 
 import BottomNav from "@/components/shared/BottomNav";
+import { Suspense } from "react";
 
 export default function AppLayout({
   children,
@@ -15,7 +16,9 @@ export default function AppLayout({
   return (
     <div className="min-h-screen flex flex-col bg-black w-full max-w-lg mx-auto relative">
       {children}
-      <BottomNav />
+      <Suspense fallback={null}>
+        <BottomNav />
+      </Suspense>
     </div>
   );
 }

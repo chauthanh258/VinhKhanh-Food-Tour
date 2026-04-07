@@ -74,3 +74,22 @@ export const deletePOI = async (req: AuthenticatedRequest, res: Response, next: 
     next(error);
   }
 };
+
+export const getOwnerPOIs = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const { search, status = 'all', page = 1, limit = 10 } = req.query;
+
+    const filters = {
+      search: search as string | undefined,
+      status: (status as 'all' | 'active' | 'hidden') || 'all',
+      page: parseInt(page as string) || 1,
+      limit: parseInt(limit as string) || 10
+    };
+
+    const result = await poiService.listOwnerPOIs(userId, filters);
+    sendResponse(res, 200, result);
+  } catch (error) {
+    next(error);
+  }
+};

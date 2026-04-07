@@ -44,6 +44,35 @@ router.post('/pois/:poiId/menu-items', authenticate, authorize(['OWNER', 'ADMIN'
 
 /**
  * @swagger
+ * /menu-items/owner/list:
+ *   get:
+ *     summary: List menu items for the authenticated owner with search and pagination
+ *     tags: [Menu]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *         description: Search by item name, description, or POI name
+ *       - in: query
+ *         name: poiId
+ *         schema: { type: string, format: uuid }
+ *         description: Filter by a specific POI
+ *       - in: query
+ *         name: page
+ *         schema: { type: number, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: number, default: 12 }
+ *     responses:
+ *       200:
+ *         description: Paginated list of menu items
+ */
+router.get('/menu-items/owner/list', authenticate, authorize(['OWNER', 'ADMIN']), menuItemController.getOwnerMenuItems);
+
+/**
+ * @swagger
  * /menu-items/{id}:
  *   put:
  *     summary: Update an existing dish
@@ -59,7 +88,7 @@ router.post('/pois/:poiId/menu-items', authenticate, authorize(['OWNER', 'ADMIN'
  *       200:
  *         description: Menu item updated
  */
-router.put('/:id', authenticate, authorize(['OWNER', 'ADMIN']), menuItemController.updateMenuItem);
+router.put('/menu-items/:id', authenticate, authorize(['OWNER', 'ADMIN']), menuItemController.updateMenuItem);
 
 /**
  * @swagger
@@ -78,6 +107,6 @@ router.put('/:id', authenticate, authorize(['OWNER', 'ADMIN']), menuItemControll
  *       200:
  *         description: Menu item deleted
  */
-router.delete('/:id', authenticate, authorize(['OWNER', 'ADMIN']), menuItemController.deleteMenuItem);
+router.delete('/menu-items/:id', authenticate, authorize(['OWNER', 'ADMIN']), menuItemController.deleteMenuItem);
 
 export default router;

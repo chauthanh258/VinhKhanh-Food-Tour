@@ -15,6 +15,24 @@ export const addMenuItem = async (req: AuthenticatedRequest, res: Response, next
   }
 };
 
+export const getOwnerMenuItems = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const { search, poiId, page = 1, limit = 12 } = req.query;
+
+    const result = await menuItemService.listOwnerMenuItems(userId, {
+      search: search as string | undefined,
+      poiId: poiId as string | undefined,
+      page: parseInt(page as string) || 1,
+      limit: parseInt(limit as string) || 12
+    });
+
+    sendResponse(res, 200, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateMenuItem = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;

@@ -2,10 +2,11 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, Layers, Settings as SettingsIcon, Menu, X, MapPin, Users, History } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutDashboard, Layers, Settings as SettingsIcon, Menu, X, MapPin, Users, History, LogOut } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "./components/NotificationBell";
+import { useUserStore } from "@/store/userStore";
 
 // export const metadata: Metadata = {
 //   title: "VinhKhanh System Admin",
@@ -17,7 +18,14 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user, logout } = useUserStore();
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   const navItems = [
     { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
@@ -60,11 +68,19 @@ export default function AdminLayout({
           ))}
         </nav>
 
-        {/* Sidebar Toggle */}
-        <div className="p-4 border-t border-border">
+        {/* Sidebar Toggle and Logout */}
+        <div className="p-4 border-t border-border space-y-2">
+          <button
+            onClick={handleLogout}
+            className={`w-full flex items-center justify-center p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors gap-3`}
+          >
+            <LogOut size={20} />
+            {sidebarOpen && <span className="text-sm font-medium">Đăng xuất</span>}
+          </button>
+          
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-muted/30 transition-colors"
+            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-muted/30 transition-colors text-muted-foreground"
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -93,8 +109,13 @@ export default function AdminLayout({
                 ● Hệ thống hoạt động
               </div>
               <NotificationBell />
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-foreground">
-                AD
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary relative group cursor-pointer">
+                {(user?.fullName || user?.email || "AD").substring(0, 2).toUpperCase()}
+                
+                {/* Tooltip to show full name */}
+                <div className="absolute right-0 top-10 w-auto min-w-max bg-secondary px-3 py-2 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 border border-border shadow-lg">
+                  {user?.fullName || user?.email || "Admin"}
+                </div>
               </div>
             </div>
           </div>
