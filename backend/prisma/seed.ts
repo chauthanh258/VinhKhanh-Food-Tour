@@ -56,7 +56,35 @@ async function main() {
     });
   }
 
-  // 4. Create POIs (50)
+  // 4. Create Categories
+  console.log('Creating categories...');
+  const categoryNames = [
+    { name: 'Hải sản', description: 'Các món hải sản tươi sống, đặc sản biển' },
+    { name: 'Bánh', description: 'Bánh truyền thống, bánh ngọt, bánh mì' },
+    { name: 'Ăn vặt', description: 'Các món ăn vặt đường phố, snack' },
+    { name: 'Nước giải khát', description: 'Trà sữa, nước mía, sinh tố, cà phê' },
+    { name: 'Phở & Mì', description: 'Phở, mì, hủ tiếu, bún bò' },
+    { name: 'Lẩu & Nướng', description: 'Lẩu các loại, nướng BBQ, nướng than' },
+  ];
+
+  const categories = [];
+  for (const cat of categoryNames) {
+    const category = await prisma.category.create({
+      data: {
+        isActive: true,
+        translations: {
+          create: {
+            name: cat.name,
+            description: cat.description,
+            language: 'vi',
+          },
+        },
+      },
+    });
+    categories.push(category);
+  }
+
+  // 5. Create POIs (50)
   console.log('Creating 50 POIs...');
   const poiNames = [
     'Ốc Oanh', 'Sushi Nhí', 'Lẩu Bò Khu Nhà Cháy', 'Phá Lấu Cô Thảo', 'Bún Mắm 444',
@@ -67,6 +95,7 @@ async function main() {
     const coords = getRandomCoords();
     const owner = owners[Math.floor(Math.random() * owners.length)];
     const baseName = poiNames[i % poiNames.length] + ' ' + i;
+    const category = categories[Math.floor(Math.random() * categories.length)];
 
     const poi = await prisma.pOI.create({
       data: {
@@ -74,6 +103,7 @@ async function main() {
         lng: coords.lng,
         rating: getRandom(3, 5),
         ownerId: owner.id,
+        categoryId: category.id,
         isActive: true,
       },
     });

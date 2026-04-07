@@ -1,36 +1,105 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, MapPin, Route, Clock, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { Card, Button, Select, Badge } from '../components/shared-components';
+import { Card, Button, Badge } from '../components/shared-components';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { poiApi } from '@/lib/api/poi';
+import { useCategoryStore, useAuditStore } from '@/store';
+
+const getActionLabel = (action: string) => {
+  const actionMap: Record<string, string> = {
+    CREATE_CATEGORY: 'Tạo danh mục',
+    UPDATE_CATEGORY: 'Sửa danh mục',
+    DELETE_CATEGORY: 'Xóa danh mục',
+    RESTORE_CATEGORY: 'Khôi phục danh mục',
+    CREATE_POI: 'Tạo POI',
+    UPDATE_POI: 'Sửa POI',
+    DELETE_POI: 'Xóa POI',
+    UPDATE_POI_STATUS: 'Đổi trạng thái POI',
+    UPDATE_USER_STATUS: 'Đổi trạng thái user',
+    SOFT_DELETE_USER: 'Xóa user',
+  };
+  return actionMap[action] || action;
+};
 
 const AdminDashboard = () => {
-        const [timeRange, setTimeRange] = useState('week');
-      
-        const stats = [
-          { label: 'Tổng POI', value: '24', icon: MapPin, change: '+2', trend: 'up', color: 'text-blue-500' },
-          { label: 'Lượt khách hôm nay', value: '1,284', icon: Users, change: '+12%', trend: 'up', color: 'text-emerald-500' },
-          { label: 'Tour đang chạy', value: '8', icon: Route, change: '-1', trend: 'down', color: 'text-orange-500' },
-          { label: 'Thời gian TB', value: '42p', icon: Clock, change: '+5p', trend: 'up', color: 'text-purple-500' },
-        ];
-      
-        const chartData = [
-          { name: 'T2', value: 400 },
-          { name: 'T3', value: 300 },
-          { name: 'T4', value: 600 },
-          { name: 'T5', value: 800 },
-          { name: 'T6', value: 500 },
-          { name: 'T7', value: 900 },
-          { name: 'CN', value: 1100 },
-        ];
-      
-        const pieData = [
-          { name: 'Hải sản', value: 45, color: '#10b981' },
-          { name: 'Ăn vặt', value: 25, color: '#3b82f6' },
-          { name: 'Bánh', value: 20, color: '#f59e0b' },
-          { name: 'Nước', value: 10, color: '#8b5cf6' },
-        ];
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const { categories, fetchCategories } = useCategoryStore();
+  const { logs, fetchLogs } = useAuditStore();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const statsRes = await poiApi.getStats();
+        await fetchCategories();
+        await fetchLogs({ skip: 0, take: 5, force: true });
+        setStats(statsRes);
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const chartData = [
+    { name: 'T2', value: 400 },
+    { name: 'T3', value: 300 },
+    { name: 'T4', value: 600 },
+    { name: 'T5', value: 800 },
+    { name: 'T6', value: 500 },
+    { name: 'T7', value: 900 },
+    { name: 'CN', value: 1100 },
+  ];
+
+  const categoryData = categories.map((cat, idx) => {
+    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
+    const translation = cat.translations?.find((t) => t.language === 'vi') || cat.translations?.[0];
+    return {
+      name: translation?.name || 'Unknown',
+      value: cat._count?.pois || 0,
+      color: colors[idx % colors.length],
+    };
+  }).filter(c => c.value > 0);
+
+  const statCards = [
+    { 
+      label: 'Tổng POI', 
+      value: stats?.pois?.total?.toString() || '0', 
+      icon: MapPin, 
+      change: '+2', 
+      trend: 'up', 
+      color: 'text-blue-500' 
+    },
+    { 
+      label: 'Tổng người dùng', 
+      value: stats?.users?.total?.toString() || '0', 
+      icon: Users, 
+      change: '+12%', 
+      trend: 'up', 
+      color: 'text-emerald-500' 
+    },
+    { 
+      label: 'POI đang hoạt động', 
+      value: stats?.pois?.active?.toString() || '0', 
+      icon: Route, 
+      change: '-1', 
+      trend: 'down', 
+      color: 'text-orange-500' 
+    },
+    { 
+      label: 'Danh mục', 
+      value: stats?.categories?.total?.toString() || '0', 
+      icon: Clock, 
+      change: '+5', 
+      trend: 'up', 
+      color: 'text-purple-500' 
+    },
+  ];
       
         return (
     <div className="space-y-6 animate-in fade-in duration-700">
@@ -47,12 +116,12 @@ const AdminDashboard = () => {
           <div className="space-y-6">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.map((stat, i) => (
+              {statCards.map((stat, i) => (
                 <Card key={i} className="relative overflow-hidden group">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
-                      <h3 className="text-2xl font-bold mt-1 text-foreground">{stat.value}</h3>
+                      <h3 className="text-2xl font-bold mt-1 text-foreground">{loading ? '...' : stat.value}</h3>
                     </div>
                     <div className={`p-2 rounded-lg bg-muted/30 ${stat.color}`}>
                       <stat.icon size={20} />
@@ -73,18 +142,7 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Line Chart */}
               <Card className="lg:col-span-2">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-foreground">Lượng khách truy cập</h3>
-                  <Select 
-                    options={[
-                      { label: 'Tuần này', value: 'week' }, 
-                      { label: 'Tháng này', value: 'month' }
-                    ]} 
-                    value={timeRange} 
-                    onChange={setTimeRange}
-                    className="w-32 h-8 text-xs"
-                  />
-                </div>
+                <h3 className="text-lg font-bold text-foreground mb-6">Lượng khách truy cập</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -112,52 +170,56 @@ const AdminDashboard = () => {
               {/* Pie Chart */}
               <Card>
                 <h3 className="text-lg font-bold text-foreground mb-6">Phân loại danh mục</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name} ${value}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                {categoryData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, value }) => `${name} ${value}`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    Chưa có dữ liệu danh mục
+                  </div>
+                )}
               </Card>
             </div>
       
             {/* Recent Activity */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-foreground">Hoạt động gần đây</h3>
-                  <Button variant="ghost" size="sm">Xem tất cả</Button>
-                </div>
+                <h3 className="text-lg font-bold text-foreground mb-6">Hoạt động gần đây</h3>
                 <div className="space-y-4">
-                  {[
-                    { action: 'Thêm POI mới', time: '10 phút trước', status: 'success' },
-                    { action: 'Cập nhật danh mục', time: '1 giờ trước', status: 'success' },
-                    { action: 'Xoá tour cũ', time: '3 giờ trước', status: 'warning' },
-                    { action: 'Reset hệ thống', time: '5 giờ trước', status: 'info' },
-                  ].map((activity, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                      <div>
-                        <p className="font-medium text-sm text-foreground">{activity.action}</p>
-                        <p className="text-xs text-muted-foreground">{activity.time}</p>
+                  {logs && logs.length > 0 ? (
+                    logs.map((log) => (
+                      <div key={log.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                        <div>
+                          <p className="font-medium text-sm text-foreground">
+                            {log.admin?.fullName || 'Admin'} {getActionLabel(log.action)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(log.createdAt).toLocaleString('vi-VN')}
+                          </p>
+                        </div>
+                        <Badge variant="success">✓</Badge>
                       </div>
-                      <Badge variant={activity.status === 'success' ? 'success' : 'warning'}>
-                        {activity.status === 'success' ? '✓' : '!'}
-                      </Badge>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">Chưa có hoạt động</p>
+                  )}
                 </div>
               </Card>
       
@@ -166,15 +228,15 @@ const AdminDashboard = () => {
                 <h3 className="text-lg font-bold text-foreground mb-6">Thống kê tổng hợp</h3>
                 <div className="space-y-4">
                   {[
-                    { label: 'Tổng POI', value: '24', change: '+2' },
-                    { label: 'Người dùng hoạt động', value: '1,284', change: '+150' },
-                    { label: 'Tour đang chạy', value: '8', change: '-1' },
-                    { label: 'Tỉ lệ hoạt động', value: '92.5%', change: '+5.2%' },
+                    { label: 'Tổng POI', value: stats?.pois?.total?.toString() || '0', change: '+2' },
+                    { label: 'Người dùng hoạt động', value: stats?.users?.total?.toString() || '0', change: '+150' },
+                    { label: 'POI đang hoạt động', value: stats?.pois?.active?.toString() || '0', change: '-1' },
+                    { label: 'Danh mục', value: stats?.categories?.total?.toString() || '0', change: '+5' },
                   ].map((stat, i) => (
                     <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                       <span className="text-sm text-muted-foreground">{stat.label}</span>
                       <div className="text-right">
-                        <p className="font-bold text-sm text-foreground">{stat.value}</p>
+                        <p className="font-bold text-sm text-foreground">{loading ? '...' : stat.value}</p>
                         <p className="text-xs text-primary">{stat.change}</p>
                       </div>
                     </div>
