@@ -24,7 +24,7 @@ export const getTranslationAndTts = async (req: Request, res: Response, next: Ne
     const { id } = req.params;
     const uiLang = (req.query.lang as string) || 'vi';
     const result = await poiService.getTranslatedDescriptionAndTts(id, uiLang);
-    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Cache-Control', 'public, max-age=10');
     sendResponse(res, 200, result);
   } catch (error) {
     next(error);
