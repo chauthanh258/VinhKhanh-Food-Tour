@@ -4,9 +4,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 async function fetcher(endpoint: string, options: RequestInit = {}) {
   const token = Cookies.get('auth-token');
+  const body = options.body;
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
   
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers,
   };
@@ -33,8 +35,20 @@ async function fetcher(endpoint: string, options: RequestInit = {}) {
 
 export const api = {
   get: (endpoint: string) => fetcher(endpoint, { method: 'GET' }),
-  post: (endpoint: string, body: any) => fetcher(endpoint, { method: 'POST', body: JSON.stringify(body) }),
-  put: (endpoint: string, body: any) => fetcher(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
-  patch: (endpoint: string, body: any) => fetcher(endpoint, { method: 'PATCH', body: JSON.stringify(body) }),
+  post: (endpoint: string, body: any) =>
+    fetcher(endpoint, {
+      method: 'POST',
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    }),
+  put: (endpoint: string, body: any) =>
+    fetcher(endpoint, {
+      method: 'PUT',
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    }),
+  patch: (endpoint: string, body: any) =>
+    fetcher(endpoint, {
+      method: 'PATCH',
+      body: body instanceof FormData ? body : JSON.stringify(body),
+    }),
   delete: (endpoint: string) => fetcher(endpoint, { method: 'DELETE' }),
 };
