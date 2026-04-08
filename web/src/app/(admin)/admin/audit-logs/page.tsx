@@ -14,6 +14,12 @@ const getActionBadgeVariant = (action: string) => {
     case 'UPDATE_CATEGORY':
     case 'UPDATE_POI':
     case 'UPDATE_USER_STATUS':
+    case 'UPDATE_USER':
+    case 'APPROVE_POI':
+    case 'REJECT_POI':
+    case 'APPROVE_USER_UPGRADE':
+    case 'REJECT_USER_UPGRADE':
+    case 'REQUEST_DELETE_POI':
       return 'default';
     case 'DELETE_CATEGORY':
     case 'DELETE_POI':
@@ -34,11 +40,149 @@ const getActionLabel = (action: string) => {
     UPDATE_POI: 'Sửa POI',
     DELETE_POI: 'Xóa POI',
     UPDATE_POI_STATUS: 'Đổi trạng thái POI',
+    APPROVE_POI: 'Phê duyệt POI',
+    REJECT_POI: 'Từ chối POI',
+    REQUEST_DELETE_POI: 'Yêu cầu xóa POI',
     RESTORE: 'Khôi phục',
     UPDATE_USER_STATUS: 'Đổi trạng thái user',
+    UPDATE_USER: 'Cập nhật user',
     SOFT_DELETE_USER: 'Xóa user',
+    APPROVE_USER_UPGRADE: 'Phê duyệt nâng cấp user',
+    REJECT_USER_UPGRADE: 'Từ chối nâng cấp user',
   };
   return actionMap[action] || action;
+};
+
+const parseJson = (value?: string) => {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+};
+
+const formatDetailValue = (value: any) => {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'boolean') return value ? 'Có' : 'Không';
+  if (Array.isArray(value)) return value.map(formatDetailValue).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+};
+
+const formatAuditDetails = (log: any) => {
+  const details = parseJson(log.details);
+  const oldValue = parseJson(log.oldValue);
+  const newValue = parseJson(log.newValue);
+
+  const segments: string[] = [];
+
+  // Handle special formatted actions (action + subject details)
+  if (log.action === 'SOFT_DELETE_USER') {
+    const subjectInfo = [];
+    if (details?.fullName) subjectInfo.push(details.fullName);
+    if (details?.email) subjectInfo.push(details.email);
+    return `Xóa người dùng: ${subjectInfo.length > 0 ? subjectInfo.join(' - ') : 'người dùng'}`;
+  } else if (log.action === 'SOFT_DELETE_POI') {
+    return details?.name ? `Xóa POI: ${details.name}` : 'Xóa POI';
+  } else if (log.action === 'DELETE_CATEGORY') {
+    return details?.name ? `Xóa danh mục: ${details.name}` : 'Xóa danh mục';
+  } else if (log.action === 'RESTORE_CATEGORY') {
+    return details?.name ? `Khôi phục danh mục: ${details.name}` : 'Khôi phục danh mục';
+  } else if (log.action === 'CREATE_POI') {
+    return details?.name ? `Tạo POI: ${details.name}` : 'Tạo POI';
+  } else if (log.action === 'CREATE_CATEGORY') {
+    return details?.name ? `Tạo danh mục: ${details.name}` : 'Tạo danh mục';
+  } else if (log.action === 'UPDATE_POI') {
+    const poiName = details?.name || 'POI';
+    if (oldValue && newValue) {
+      const changedFields = Object.keys({ ...oldValue, ...newValue })
+        .filter((key) => oldValue[key] !== newValue[key])
+        .map((key) => `${key}: ${formatDetailValue(oldValue[key])} → ${formatDetailValue(newValue[key])}`);
+      return changedFields.length > 0 ? `Sửa POI: ${poiName} • ${changedFields.join(' • ')}` : `Sửa POI: ${poiName}`;
+    }
+    return `Sửa POI: ${poiName}`;
+  } else if (log.action === 'UPDATE_CATEGORY') {
+    const categoryName = details?.name || 'danh mục';
+    return `Sửa danh mục: ${categoryName}`;
+  } else if (log.action === 'UPDATE_USER') {
+    const userName = details?.fullName || 'người dùng';
+    const userEmail = details?.email ? ` - ${details.email}` : '';
+    if (oldValue && newValue) {
+      const changedFields = Object.keys({ ...oldValue, ...newValue })
+        .filter((key) => oldValue[key] !== newValue[key])
+        .map((key) => `${key}: ${formatDetailValue(oldValue[key])} → ${formatDetailValue(newValue[key])}`);
+      return changedFields.length > 0 ? `Cập nhật user: ${userName}${userEmail} • ${changedFields.join(' • ')}` : `Cập nhật user: ${userName}${userEmail}`;
+    }
+    return `Cập nhật user: ${userName}${userEmail}`;
+  } else if (log.action === 'UPDATE_POI_STATUS') {
+    const poiName = details?.name || 'POI';
+    const status = details?.isActive ? 'Kích hoạt' : 'Tạm dừng';
+    return `Đổi trạng thái POI: ${poiName} → ${status}`;
+  } else if (log.action === 'UPDATE_USER_STATUS') {
+    const status = details?.isActive ? 'Kích hoạt' : 'Tạm dừng';
+    return `Đổi trạng thái user → ${status}`;
+  } else if (log.action === 'APPROVE_POI') {
+    const poiName = details?.name || 'POI';
+    const decision = details?.decision || 'phê duyệt';
+    return `Phê duyệt POI: ${poiName} → ${decision === 'APPROVED' ? 'Phê duyệt' : 'Từ chối'}`;
+  } else if (log.action === 'REQUEST_DELETE_POI') {
+    const poiName = details?.name || 'POI';
+    return `Yêu cầu xóa POI: ${poiName}`;
+  } else if (log.action === 'APPROVE_USER_UPGRADE') {
+    const userName = details?.fullName || 'người dùng';
+    const userEmail = details?.email ? ` - ${details.email}` : '';
+    return `Phê duyệt nâng cấp: ${userName}${userEmail} → Owner`;
+  } else if (log.action === 'REJECT_USER_UPGRADE') {
+    const userName = details?.fullName || 'người dùng';
+    const userEmail = details?.email ? ` - ${details.email}` : '';
+    const reason = details?.rejectionReason ? ` • Lý do: ${details.rejectionReason}` : '';
+    return `Từ chối nâng cấp: ${userName}${userEmail}${reason}`;
+  }
+
+  // Default handling for other actions with field-by-field details
+  if (details && typeof details === 'object' && !Array.isArray(details)) {
+    if ('name' in details) segments.push(`Tên: ${formatDetailValue(details.name)}`);
+    if ('fullName' in details) segments.push(`Họ tên: ${formatDetailValue(details.fullName)}`);
+    if ('email' in details) segments.push(`Email: ${formatDetailValue(details.email)}`);
+    if ('language' in details) segments.push(`Ngôn ngữ: ${formatDetailValue(details.language)}`);
+    if ('isActive' in details) segments.push(`Trạng thái hoạt động: ${details.isActive ? 'Kích hoạt' : 'Tạm dừng'}`);
+    if ('status' in details) segments.push(`Trạng thái: ${formatDetailValue(details.status)}`);
+    if ('rejectionReason' in details) segments.push(`Lý do từ chối: ${formatDetailValue(details.rejectionReason)}`);
+    if ('requestedRole' in details) segments.push(`Vai trò yêu cầu: ${formatDetailValue(details.requestedRole)}`);
+    if ('ownerId' in details) segments.push(`ID chủ sở hữu: ${formatDetailValue(details.ownerId)}`);
+    if ('categoryId' in details) segments.push(`ID danh mục: ${formatDetailValue(details.categoryId)}`);
+
+    Object.entries(details).forEach(([key, value]) => {
+      if (
+        ['name', 'fullName', 'email', 'language', 'isActive', 'status', 'rejectionReason', 'requestedRole', 'ownerId', 'categoryId', 'decision'].includes(key)
+      ) {
+        return;
+      }
+      if (value !== undefined && value !== null && value !== '') {
+        segments.push(`${key}: ${formatDetailValue(value)}`);
+      }
+    });
+  } else if (details !== null && details !== undefined) {
+    segments.push(formatDetailValue(details));
+  }
+
+  // Fallback to showing oldValue → newValue for changes
+  if (segments.length === 0 && oldValue && newValue && typeof oldValue === 'object' && typeof newValue === 'object') {
+    const changedFields = Object.keys({ ...oldValue, ...newValue })
+      .filter((key) => oldValue[key] !== newValue[key])
+      .map((key) => `${key}: ${formatDetailValue(oldValue[key])} → ${formatDetailValue(newValue[key])}`);
+
+    if (changedFields.length > 0) {
+      segments.push(`Thay đổi: ${changedFields.join(' • ')}`);
+    }
+  }
+
+  if (segments.length === 0 && log.targetId) {
+    segments.push(`ID liên quan: ${log.targetId}`);
+  }
+
+  return segments.length > 0 ? segments.join(' • ') : '-';
 };
 
 const formatDateTime = (dateStr: string) => {
@@ -71,10 +215,10 @@ const AuditLogs = () => {
   const filteredLogs = logs.filter((log) => {
     const adminEmail = log.admin?.email?.toLowerCase() || '';
     const targetId = log.targetId?.toLowerCase() || '';
-    const details = log.details?.toLowerCase() || '';
+    const detailsText = formatAuditDetails(log).toLowerCase();
     const term = search.toLowerCase();
     
-    const matchesSearch = adminEmail.includes(term) || targetId.includes(term) || details.includes(term);
+    const matchesSearch = adminEmail.includes(term) || targetId.includes(term) || detailsText.includes(term);
     const matchesAction = actionFilter === 'all' || log.action === actionFilter;
     
     return matchesSearch && matchesAction;
@@ -91,7 +235,7 @@ const AuditLogs = () => {
           formatDateTime(log.createdAt),
           log.admin?.email || 'N/A',
           getActionLabel(log.action),
-          `"${(log.details || '').replace(/"/g, '""')}"`,
+          `"${formatAuditDetails(log).replace(/"/g, '""')}"`,
         ];
         return row.join(',');
       }),
@@ -105,6 +249,7 @@ const AuditLogs = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const uniqueActions = [...new Set(logs.map((l) => l.action))];
@@ -177,7 +322,7 @@ const AuditLogs = () => {
                     </Badge>
                   </td>
                   <td className="px-6 py-4 text-muted-foreground text-xs max-w-xs truncate">
-                    {log.details || '-'}
+                    {formatAuditDetails(log)}
                   </td>
                 </tr>
               ))}

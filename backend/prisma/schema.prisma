@@ -13,12 +13,19 @@ enum Role {
   USER
 }
 
+enum POIStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id            String    @id @default(uuid()) @db.Uuid
   email         String    @unique
   passwordHash  String    @map("password_hash")
   fullName      String?   @map("full_name")
   role          Role      @default(USER)
+  requestedRole Role?     @map("requested_role")
   language      String    @default("vi")
   isOnboarded   Boolean   @default(false) @map("is_onboarded")
   isActive      Boolean   @default(true) @map("is_active")
@@ -33,21 +40,26 @@ model User {
 }
 
 model POI {
-  id           String           @id @default(uuid()) @db.Uuid
-  lat          Float
-  lng          Float
-  rating       Decimal          @default(0.0) @db.Decimal(2, 1)
-  ownerId      String?          @map("owner_id") @db.Uuid
-  categoryId   String?          @map("category_id") @db.Uuid
-  isActive     Boolean          @default(true) @map("is_active")
-  deletedAt    DateTime?        @map("deleted_at")
-  createdAt    DateTime         @default(now()) @map("created_at")
-  updatedAt    DateTime         @default(now()) @updatedAt @map("updated_at")
+  id              String    @id @default(uuid()) @db.Uuid
+  lat             Float
+  lng             Float
+  rating          Decimal   @default(0.0) @db.Decimal(2, 1)
+  ownerId         String?   @map("owner_id") @db.Uuid
+  categoryId      String?   @map("category_id") @db.Uuid
+  status          POIStatus @default(APPROVED)
+  isActive        Boolean   @default(true) @map("is_active")
+  submittedAt     DateTime? @map("submitted_at")
+  approvedAt      DateTime? @map("approved_at")
+  rejectedAt      DateTime? @map("rejected_at")
+  rejectionReason String?   @map("rejection_reason") @db.Text
+  deletedAt       DateTime? @map("deleted_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  owner        User?            @relation("OwnerPois", fields: [ownerId], references: [id], onDelete: SetNull)
-  category     Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  translations POITranslation[]
-  menuItems    MenuItem[]
+  owner           User?            @relation("OwnerPois", fields: [ownerId], references: [id], onDelete: SetNull)
+  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  translations    POITranslation[]
+  menuItems       MenuItem[]
 
   @@index([lat, lng])
   @@index([categoryId])
@@ -116,14 +128,18 @@ model MenuItem {
 }
 
 model AuditLog {
-  id        String   @id @default(uuid()) @db.Uuid
-  adminId   String   @map("admin_id") @db.Uuid
-  action    String   @db.VarChar(255)
-  targetId  String?  @map("target_id") @db.Uuid
-  details   String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid()) @db.Uuid
+  adminId     String   @map("admin_id") @db.Uuid
+  action      String   @db.VarChar(255)
+  targetId    String?  @map("target_id") @db.Uuid
+  details     String?  @db.Text
+  oldValue    String?  @map("old_value") @db.Text
+  newValue    String?  @map("new_value") @db.Text
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  admin     User     @relation("AdminAuditLogs", fields: [adminId], references: [id])
+  admin       User     @relation("AdminAuditLogs", fields: [adminId], references: [id])
 
   @@map("audit_logs")
 }

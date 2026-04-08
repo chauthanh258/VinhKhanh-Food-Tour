@@ -74,3 +74,15 @@ export const deletePOI = async (req: AuthenticatedRequest, res: Response, next: 
     next(error);
   }
 };
+
+export const requestDeletePOI = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+    const userRole = req.user!.role;
+    const poi = await poiService.requestDeletePOI(id, userId, userRole);
+    sendResponse(res, 200, poi, 'POI deletion request submitted successfully');
+  } catch (error) {
+    next(error);
+  }
+};

@@ -55,6 +55,20 @@ router.put('/users/role', authenticate, authorize(['ADMIN']), userController.upd
 
 /**
  * @swagger
+ * /admin/pending-requests:
+ *   get:
+ *     summary: Get all pending requests (POIs and user role upgrades)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Pending requests retrieved
+ */
+router.get('/pending-requests', authenticate, authorize(['ADMIN']), adminController.getPendingRequests);
+
+/**
+ * @swagger
  * /admin/users/{id}:
  *   get:
  *     summary: Get details of a specific user
@@ -102,6 +116,38 @@ router.get('/users/:id', authenticate, authorize(['ADMIN']), adminController.get
  *         description: User status updated
  */
 router.patch('/users/:id/status', authenticate, authorize(['ADMIN']), adminController.updateUserStatus);
+
+/**
+ * @swagger
+ * /admin/users/{id}:
+ *   put:
+ *     summary: Update user details (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName: { type: string }
+ *               email: { type: string }
+ *               role: { type: string, enum: [USER, OWNER] }
+ *               isActive: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ */
+router.put('/users/:id', authenticate, authorize(['ADMIN']), adminController.updateUser);
 
 /**
  * @swagger
@@ -270,6 +316,35 @@ router.put('/pois/:id', authenticate, authorize(['ADMIN']), adminController.upda
 
 /**
  * @swagger
+ * /admin/pois/{id}/approve:
+ *   patch:
+ *     summary: Approve or reject a pending POI
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status: { type: string, enum: [APPROVED, REJECTED] }
+ *     responses:
+ *       200:
+ *         description: POI approved or rejected
+ */
+router.patch('/pois/:id/approve', authenticate, authorize(['ADMIN']), adminController.approvePOI);
+
+/**
+ * @swagger
  * /admin/pois/{id}:
  *   delete:
  *     summary: Soft delete a POI
@@ -329,5 +404,119 @@ router.get('/stats', authenticate, authorize(['ADMIN']), adminController.getSyst
  *         description: Audit logs retrieved
  */
 router.get('/audit-logs', authenticate, authorize(['ADMIN']), adminController.getAuditLogs);
+
+/**
+ * @swagger
+ * /admin/requests:
+ *   get:
+ *     summary: Get pending POI and user upgrade requests
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Pending requests retrieved
+ */
+router.get('/requests', authenticate, authorize(['ADMIN']), adminController.getPendingRequests);
+
+/**
+ * @swagger
+ * /admin/requests/poi/{id}/approve:
+ *   post:
+ *     summary: Approve pending POI request
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: POI approved
+ */
+router.post('/requests/poi/:id/approve', authenticate, authorize(['ADMIN']), adminController.approvePOIRequest);
+
+/**
+ * @swagger
+ * /admin/requests/poi/{id}/reject:
+ *   post:
+ *     summary: Reject pending POI request
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               rejectionReason: { type: string }
+ *     responses:
+ *       200:
+ *         description: POI rejected
+ */
+router.post('/requests/poi/:id/reject', authenticate, authorize(['ADMIN']), adminController.rejectPOIRequest);
+
+/**
+ * @swagger
+ * /admin/requests/user/{id}/approve:
+ *   post:
+ *     summary: Approve user upgrade request
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: User upgrade approved
+ */
+router.post('/requests/user/:id/approve', authenticate, authorize(['ADMIN']), adminController.approveUserUpgrade);
+
+/**
+ * @swagger
+ * /admin/requests/user/{id}/reject:
+ *   post:
+ *     summary: Reject user upgrade request
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               rejectionReason: { type: string }
+ *     responses:
+ *       200:
+ *         description: User upgrade rejected
+ */
+router.post('/requests/user/:id/reject', authenticate, authorize(['ADMIN']), adminController.rejectUserUpgrade);
 
 export default router;

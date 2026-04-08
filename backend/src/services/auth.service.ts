@@ -122,7 +122,44 @@ export const updateProfile = async (userId: string, data: any) => {
     throw new AppError(404, 'User not found');
   }
 
-  const updatedUser = await userRepo.updateUser(userId, data);
+  const updateData: any = {};
+
+  if (data.fullName !== undefined) {
+    updateData.fullName = data.fullName;
+  }
+
+  if (data.language !== undefined) {
+    updateData.language = data.language;
+  }
+
+  if (data.isOnboarded !== undefined) {
+    updateData.isOnboarded = data.isOnboarded;
+  }
+
+  if (data.newPassword !== undefined) {
+    if (typeof data.newPassword !== 'string' || data.newPassword.length < 8) {
+      throw new AppError(400, 'Mật khẩu mới cần tối thiểu 8 ký tự');
+    }
+
+    if (user.passwordHash) {
+      if (!data.currentPassword || typeof data.currentPassword !== 'string') {
+        throw new AppError(400, 'Mật khẩu hiện tại bắt buộc');
+      }
+
+      const isPasswordValid = await comparePassword(data.currentPassword, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new AppError(400, 'Mật khẩu hiện tại không đúng');
+      }
+    }
+
+    updateData.passwordHash = await hashPassword(data.newPassword);
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    throw new AppError(400, 'No update fields provided');
+  }
+
+  const updatedUser = await userRepo.updateUser(userId, updateData);
   return {
     id: updatedUser.id,
     email: updatedUser.email,
