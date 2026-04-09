@@ -46,9 +46,27 @@ const swaggerOptions = {
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Load spec via endpoint so the server URL can be generated from the current request host.
+app.use(
+  '/api/docs',
+  swaggerUi.serve,
+  swaggerUi.setup(undefined, {
+    swaggerOptions: {
+      url: '/api/openapi.json',
+    },
+  })
+);
 app.get('/api/openapi.json', (req, res) => {
-  res.json(swaggerSpec);
+  const forwardedProto = req.header('x-forwarded-proto');
+  const protocol = forwardedProto || req.protocol;
+  const host = req.header('host');
+  const dynamicApiUrl = host ? `${protocol}://${host}/api` : env.API_BASE_URL;
+
+  res.json({
+    ...swaggerSpec,
+    servers: [{ url: dynamicApiUrl }],
+  });
 });
 
 // Routes
