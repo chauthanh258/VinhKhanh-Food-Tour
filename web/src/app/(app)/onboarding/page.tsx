@@ -29,7 +29,7 @@ export default function OnboardingPage() {
   const handleFinish = async () => {
     setIsUpdating(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/profile`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/profile`, {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
