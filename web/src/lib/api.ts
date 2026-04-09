@@ -2,6 +2,17 @@ import Cookies from 'js-cookie';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
+const parseResponseBody = async (response: Response) => {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return { message: text };
+};
+
 async function fetcher(endpoint: string, options: RequestInit = {}) {
   const token = Cookies.get('auth-token');
   const body = options.body;
@@ -18,7 +29,7 @@ async function fetcher(endpoint: string, options: RequestInit = {}) {
     headers,
   });
 
-  const data = await response.json();
+  const data = await parseResponseBody(response);
 
   if (!response.ok) {
     if (response.status === 401) {
@@ -27,7 +38,7 @@ async function fetcher(endpoint: string, options: RequestInit = {}) {
       window.location.href = '/login';
       throw new Error('Phiên đăng nhập hết hạn');
     }
-    throw new Error(data.message || data.error || 'Something went wrong');
+    throw new Error(data.message || data.error || `Request failed: ${response.status}`);
   }
 
   return data;

@@ -237,14 +237,7 @@ export default function POIManagement() {
 
     try {
       setIsSubmitting(true);
-      let imageUrl = formData.imageUrl.trim() || undefined;
-
-      if (imageFile) {
-        const imageFormData = new FormData();
-        imageFormData.append("image", imageFile);
-        const uploadResponse = await api.upload("/pois/upload-image", imageFormData);
-        imageUrl = uploadResponse.data.imageUrl;
-      }
+      const imageUrl = formData.imageUrl.trim() || undefined;
 
       const payload = {
         lat: Number(formData.lat),
