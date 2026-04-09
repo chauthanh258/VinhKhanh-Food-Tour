@@ -10,10 +10,22 @@ import { env } from './config/env';
 
 const app = express();
 const PORT = env.PORT;
+const allowedOrigins = env.FRONTEND_URL.split(',').map((origin) => origin.trim()).filter(Boolean);
 
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: env.FRONTEND_URL }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    },
+  })
+);
 app.use(morgan('dev'));
 app.use(express.json());
 
