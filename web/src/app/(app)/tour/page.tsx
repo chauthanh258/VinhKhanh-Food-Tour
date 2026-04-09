@@ -8,7 +8,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import PlaceList from '@/app/(app)/tour/components/PlaceList';
 import { useUserStore } from '@/store/userStore';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 const TourMap = dynamic(() => import('@/app/(app)/tour/components/TourMap'), { 
   ssr: false,
@@ -429,7 +429,7 @@ function TourPageContent() {
   const fetchPois = useCallback(async (lat: number, lng: number) => {
     try {
       const res = await fetch(
-        `${API_BASE}/api/pois?lat=${lat}&lng=${lng}&radius=1500&lang=${encodeURIComponent(language)}`
+        `${API_BASE}/pois?lat=${lat}&lng=${lng}&radius=1500&lang=${encodeURIComponent(language)}`
       );
       const data = await res.json();
       if (data.success) {
@@ -528,7 +528,7 @@ function TourPageContent() {
         audio.onerror = next;
 
         try {
-          const res = await fetch(`${API_BASE}/api/pois/${nextPoi.id}/translate-tts?lang=${encodeURIComponent(language)}`);
+          const res = await fetch(`${API_BASE}/pois/${nextPoi.id}/translate-tts?lang=${encodeURIComponent(language)}`);
           if (res.ok) {
             const data = await res.json();
             setActivePoi((prev) => {

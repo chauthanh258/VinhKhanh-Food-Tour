@@ -7,6 +7,28 @@ import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
 import { useGoogleLogin } from "@react-oauth/google";
 
+function GoogleRegisterButton({ isLoading, onRegisterSuccess }: { isLoading: boolean; onRegisterSuccess: () => void }) {
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async () => {
+      onRegisterSuccess();
+    },
+    onError: () => {
+      console.log('Login Failed');
+    },
+  });
+
+  return (
+    <button
+      onClick={() => loginWithGoogle()}
+      disabled={isLoading}
+      className="w-full h-14 bg-zinc-100 hover:bg-white disabled:bg-zinc-300 text-black rounded-2xl transition-all font-semibold flex items-center justify-center gap-3 border border-zinc-200"
+    >
+      <Chrome className="w-5 h-5" />
+      Tiếp tục với Google
+    </button>
+  );
+}
+
 export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -14,13 +36,14 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { setAuth } = useUserStore();
   const router = useRouter();
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/register`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, fullName, role: 'USER' }),
@@ -41,8 +64,7 @@ export default function RegisterPage() {
     }
   };
 
-  const loginWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
+  const handleGoogleRegisterSuccess = async () => {
       setIsLoading(true);
       try {
         // Mock successful Google login
@@ -56,11 +78,7 @@ export default function RegisterPage() {
       } finally {
         setIsLoading(false);
       }
-    },
-    onError: () => {
-      console.log('Login Failed');
-    },
-  });
+    };
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -149,13 +167,18 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      <button
-        onClick={() => loginWithGoogle()}
-        className="w-full h-14 bg-zinc-100 hover:bg-white text-black rounded-2xl transition-all font-semibold flex items-center justify-center gap-3 border border-zinc-200"
-      >
-        <Chrome className="w-5 h-5" /> 
-        Tiếp tục với Google
-      </button>
+      {googleClientId ? (
+        <GoogleRegisterButton isLoading={isLoading} onRegisterSuccess={handleGoogleRegisterSuccess} />
+      ) : (
+        <button
+          disabled
+          className="w-full h-14 bg-zinc-800 text-zinc-500 rounded-2xl font-semibold flex items-center justify-center gap-3 border border-zinc-700 cursor-not-allowed"
+          title="Thiếu NEXT_PUBLIC_GOOGLE_CLIENT_ID"
+        >
+          <Chrome className="w-5 h-5" />
+          Google chưa được cấu hình
+        </button>
+      )}
 
       <p className="text-center text-zinc-500 mt-4">
         Đã có tài khoản?{" "}

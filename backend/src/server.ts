@@ -2,20 +2,30 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import routes from './routes/index';
 import { errorHandler } from './middlewares/error.middleware';
-
-dotenv.config();
+import { env } from './config/env';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT;
+const allowedOrigins = env.FRONTEND_URL.split(',').map((origin) => origin.trim()).filter(Boolean);
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin not allowed by CORS: ${origin}`));
+    },
+  })
+);
 app.use(morgan('dev'));
 app.use(express.json());
 
@@ -30,7 +40,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${PORT}/api`,
+        url: env.API_BASE_URL,
       },
     ],
     components: {
@@ -48,9 +58,27 @@ const swaggerOptions = {
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Load spec via endpoint so the server URL can be generated from the current request host.
+app.use(
+  '/api/docs',
+  swaggerUi.serve,
+  swaggerUi.setup(undefined, {
+    swaggerOptions: {
+      url: '/api/openapi.json',
+    },
+  })
+);
 app.get('/api/openapi.json', (req, res) => {
-  res.json(swaggerSpec);
+  const forwardedProto = req.header('x-forwarded-proto');
+  const protocol = forwardedProto || req.protocol;
+  const host = req.header('host');
+  const dynamicApiUrl = host ? `${protocol}://${host}/api` : env.API_BASE_URL;
+
+  res.json({
+    ...swaggerSpec,
+    servers: [{ url: dynamicApiUrl }],
+  });
 });
 
 // Routes

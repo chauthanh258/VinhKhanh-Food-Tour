@@ -1,10 +1,8 @@
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
+import { env } from '../config/env';
 
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET = env.JWT_SECRET;
+const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN;
 
 export interface TokenPayload {
   userId: string;

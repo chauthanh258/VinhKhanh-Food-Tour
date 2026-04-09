@@ -35,6 +35,7 @@ export default function QRCodePage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPoiId, setSelectedPoiId] = useState<string>("");
+  const [siteOrigin, setSiteOrigin] = useState("");
   const [copied, setCopied] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [onlyWithImage, setOnlyWithImage] = useState(false);
@@ -60,6 +61,10 @@ export default function QRCodePage() {
     fetchPois();
   }, [fetchPois]);
 
+  useEffect(() => {
+    setSiteOrigin(window.location.origin);
+  }, []);
+
   const filteredPois = useMemo(() => {
     const keyword = searchQuery.trim().toLowerCase();
     return pois.filter((poi) => {
@@ -82,7 +87,7 @@ export default function QRCodePage() {
   const selectedPoi = filteredPois.find((poi) => poi.id === selectedPoiId) || filteredPois[0] || null;
 
   const restaurantName = selectedPoi?.translations?.[0]?.name || "Select a restaurant";
-  const directLink = selectedPoi ? `${window.location.origin}/poi/${selectedPoi.id}` : "";
+  const directLink = selectedPoi && siteOrigin ? `${siteOrigin}/poi/${selectedPoi.id}` : "";
   const qrImageUrl = selectedPoi
     ? `https://api.qrserver.com/v1/create-qr-code/?size=${QR_SIZE}x${QR_SIZE}&data=${encodeURIComponent(directLink)}`
     : "";
