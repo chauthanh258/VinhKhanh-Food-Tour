@@ -7,6 +7,28 @@ import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
 import { useGoogleLogin } from "@react-oauth/google";
 
+function GoogleLoginButton({ isLoading, onLoginSuccess }: { isLoading: boolean; onLoginSuccess: () => void }) {
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async () => {
+      onLoginSuccess();
+    },
+    onError: () => {
+      console.log('Login Failed');
+    },
+  });
+
+  return (
+    <button
+      onClick={() => loginWithGoogle()}
+      disabled={isLoading}
+      className="w-full h-14 bg-zinc-100 hover:bg-white disabled:bg-zinc-300 text-black rounded-2xl transition-all font-semibold flex items-center justify-center gap-3 border border-zinc-200"
+    >
+      <Chrome className="w-5 h-5" />
+      Tiếp tục với Google
+    </button>
+  );
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,6 +36,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { setAuth } = useUserStore();
   const router = useRouter();
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,11 +64,10 @@ export default function LoginPage() {
     }
   };
 
-  const loginWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
+  const handleGoogleSuccess = async () => {
       setIsLoading(true);
       try {
-        // In a real app, send the code/token to your backend
+        // In a real app, send the token to your backend
         // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/google`, {
         //   method: 'POST',
         //   headers: { 'Content-Type': 'application/json' },
@@ -66,11 +88,7 @@ export default function LoginPage() {
       } finally {
         setIsLoading(false);
       }
-    },
-    onError: () => {
-      console.log('Login Failed');
-    },
-  });
+    };
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 w-full">
