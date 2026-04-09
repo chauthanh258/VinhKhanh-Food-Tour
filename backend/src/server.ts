@@ -2,20 +2,18 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import routes from './routes/index';
 import { errorHandler } from './middlewares/error.middleware';
-
-dotenv.config();
+import { env } from './config/env';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT;
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({ origin: env.FRONTEND_URL }));
 app.use(morgan('dev'));
 app.use(express.json());
 
@@ -30,7 +28,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${PORT}/api`,
+        url: env.API_BASE_URL,
       },
     ],
     components: {

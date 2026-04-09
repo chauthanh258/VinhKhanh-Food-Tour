@@ -4,8 +4,9 @@ import { generateToken } from '../utils/jwt.util';
 import { AppError } from '../middlewares/error.middleware';
 import { Role } from '@prisma/client';
 import { OAuth2Client } from 'google-auth-library';
+import { env } from '../config/env';
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const client = env.GOOGLE_CLIENT_ID ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null;
 
 export const register = async (email: string, password: string, fullName: string, role: Role = Role.USER) => {
   const existingUser = await userRepo.findUserByEmail(email);
@@ -74,10 +75,14 @@ export const getMe = async (userId: string) => {
 };
 
 export const googleAuth = async (idToken: string) => {
+  if (!client || !env.GOOGLE_CLIENT_ID) {
+    throw new AppError(500, 'Google authentication is not configured');
+  }
+
   try {
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: env.GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
     if (!payload || !payload.email) {

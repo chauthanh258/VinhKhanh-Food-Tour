@@ -33,6 +33,16 @@ cp .env.example .env
 ```
 Update `DATABASE_URL` with your PostgreSQL connection string.
 
+Environment-specific examples are also included:
+- `.env.development.example`
+- `.env.production.example`
+
+The backend now auto-loads env files in this order (highest priority first):
+1. `.env.<NODE_ENV>.local`
+2. `.env.local`
+3. `.env.<NODE_ENV>`
+4. `.env`
+
 ### 3. Database Setup (Prisma)
 Generate the Prisma client and run migrations:
 ```bash
@@ -55,6 +65,14 @@ Start the development server:
 npm run dev
 ```
 The server will run on `http://localhost:3001`.
+
+Build and run in production mode:
+```bash
+npm run build
+npm start
+```
+
+`npm run dev` sets `NODE_ENV=development`, and `npm start` sets `NODE_ENV=production`.
 
 ## Documentation
 Once the server is running, access the Swagger UI at:
