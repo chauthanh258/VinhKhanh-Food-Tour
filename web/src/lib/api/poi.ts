@@ -59,6 +59,7 @@ export const poiApi = {
     lat: number;
     lng: number;
     categoryId?: string;
+    ownerId?: string;
     isActive?: boolean;
     translations: Array<{
       name: string;
@@ -80,9 +81,10 @@ export const poiApi = {
       lat?: number;
       lng?: number;
       categoryId?: string;
+      ownerId?: string | null;
       isActive?: boolean;
       translations?: Array<{
-        name: string;
+        name?: string;
         description?: string;
         specialties?: string;
         priceRange?: string;
@@ -103,6 +105,11 @@ export const poiApi = {
 
   delete: async (id: string) => {
     const response = await api.delete(`/admin/pois/${id}`);
+    return response.data;
+  },
+
+  requestDelete: async (id: string) => {
+    const response = await api.post(`/pois/${id}/request-delete`);
     return response.data;
   },
 

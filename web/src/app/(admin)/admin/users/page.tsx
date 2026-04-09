@@ -5,6 +5,7 @@ import { Users, Activity, Plus, Clock, Route, Eye, Search, Play, Trash2, Edit } 
 import { Card, Button, Input, Badge, Dialog, cn, Select, EmptyState } from '../../components/shared-components';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useUserAdminStore, useAuditStore } from '@/store';
+import { useToast } from '@/components/Toast';
 
 interface UserSession {
   session_id: string;
@@ -24,13 +25,24 @@ interface UserSession {
 }
 
 const UserManager = () => {
-  const { users, loading, error, fetchUsers, updateUserStatus, deleteUser } = useUserAdminStore();
+  const { addToast } = useToast();
+  const { users, loading, error, fetchUsers, updateUserStatus, deleteUser, updateUser } = useUserAdminStore();
   const { fetchLogs } = useAuditStore();
   const [activeTab, setActiveTab] = useState('active');
   const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
   const [isJourneyOpen, setIsJourneyOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [userForm, setUserForm] = useState({
+    fullName: '',
+    email: '',
+    role: 'USER',
+    isActive: true,
+  });
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; user: any }>({ isOpen: false, user: null });
+  const [confirmUnlock, setConfirmUnlock] = useState<{ isOpen: boolean; user: any }>({ isOpen: false, user: null });
 
   useEffect(() => {
     fetchUsers();
@@ -57,19 +69,64 @@ const UserManager = () => {
     try {
       await updateUserStatus(user.id, !user.isActive);
       await fetchLogs({ force: true });
+      addToast(user.isActive ? 'Đã khóa người dùng thành công' : 'Đã mở khóa người dùng thành công', 'success');
+      fetchUsers(); // Refresh list
     } catch (err) {
       console.error('Failed to update user status:', err);
+      addToast('Lỗi khi cập nhật trạng thái người dùng', 'error');
+    }
+  };
+
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    setUserForm({
+      fullName: user.fullName || '',
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+    try {
+      await updateUser(editingUser.id, userForm);
+      await fetchLogs({ force: true });
+      setIsEditOpen(false);
+      setEditingUser(null);
+      addToast('Đã cập nhật thông tin người dùng thành công', 'success');
+      fetchUsers(); // Refresh list
+    } catch (err) {
+      console.error('Failed to update user:', err);
+      addToast('Lỗi khi cập nhật thông tin người dùng', 'error');
     }
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
-      try {
-        await deleteUser(id);
-        await fetchLogs({ force: true });
-      } catch (err) {
-        console.error('Failed to delete user:', err);
-      }
+    try {
+      await deleteUser(id);
+      await fetchLogs({ force: true });
+      addToast('Người dùng đã được xóa thành công', 'success');
+      fetchUsers();
+      setConfirmDelete({ isOpen: false, user: null });
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      addToast('Lỗi khi xóa người dùng. Vui lòng thử lại', 'error');
+    }
+  };
+
+  const handleUnlockUser = async () => {
+    if (!confirmUnlock.user) return;
+    try {
+      await updateUserStatus(confirmUnlock.user.id, true);
+      await fetchLogs({ force: true });
+      addToast('Đã mở khóa người dùng thành công', 'success');
+      fetchUsers();
+      setConfirmUnlock({ isOpen: false, user: null });
+    } catch (err) {
+      console.error('Failed to unlock user:', err);
+      addToast('Lỗi khi mở khóa người dùng. Vui lòng thử lại', 'error');
     }
   };
 
@@ -140,7 +197,7 @@ const UserManager = () => {
                     <td className="px-6 py-4 font-medium">{user.fullName || 'N/A'}</td>
                     <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={user.role === 'ADMIN' ? 'default' : user.role === 'OWNER' ? 'warning' : 'success'}>
+                      <Badge variant={user.role === 'ADMIN' ? 'info' : user.role === 'OWNER' ? 'warning' : 'success'}>
                         {user.role}
                       </Badge>
                     </td>
@@ -149,7 +206,10 @@ const UserManager = () => {
                       {new Date(user.createdAt).toLocaleDateString('vi-VN')}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(user)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}>
+                        <Edit size={16} />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setConfirmDelete({ isOpen: true, user })}>
                         <Trash2 size={16} />
                       </Button>
                     </td>
@@ -228,7 +288,7 @@ const UserManager = () => {
                     <Badge variant="danger">{user.role}</Badge>
                   </td>
                   <td className="px-6 py-4 text-right space-x-2">
-                    <Button variant="ghost" size="icon" onClick={() => handleToggleStatus(user)}>
+                    <Button variant="ghost" size="icon" onClick={() => setConfirmUnlock({ isOpen: true, user })}>
                       <Plus size={16} />
                     </Button>
                   </td>
@@ -245,6 +305,86 @@ const UserManager = () => {
           )}
         </Card>
       )}
+
+      <Dialog isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Chỉnh sửa người dùng">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Họ và tên</label>
+            <Input
+              value={userForm.fullName}
+              onChange={(e) => setUserForm({ ...userForm, fullName: e.target.value })}
+              placeholder="Nhập họ tên"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+            <Input
+              value={userForm.email}
+              onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+              placeholder="Nhập email"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Vai trò</label>
+            <Select
+              options={[
+                { label: 'User', value: 'USER' },
+                { label: 'Owner', value: 'OWNER' },
+              ]}
+              value={userForm.role}
+              onChange={(value) => setUserForm({ ...userForm, role: value })}
+            />
+          </div>
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" onClick={() => setIsEditOpen(false)} className="flex-1">
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleSaveUser} className="flex-1">
+              Lưu
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, user: null })}
+        title="Xác nhận xóa người dùng"
+      >
+        <div className="space-y-4">
+          <p className="text-muted-foreground">
+            Bạn có chắc muốn xóa người dùng "{confirmDelete.user?.fullName || confirmDelete.user?.email}" không? Hành động này không thể hoàn tác.
+          </p>
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" onClick={() => setConfirmDelete({ isOpen: false, user: null })} className="flex-1">
+              Hủy
+            </Button>
+            <Button variant="danger" onClick={() => confirmDelete.user && handleDeleteUser(confirmDelete.user.id)} className="flex-1">
+              Xóa người dùng
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <Dialog
+        isOpen={confirmUnlock.isOpen}
+        onClose={() => setConfirmUnlock({ isOpen: false, user: null })}
+        title="Xác nhận mở khóa người dùng"
+      >
+        <div className="space-y-4">
+          <p className="text-muted-foreground">
+            Bạn có chắc muốn mở khóa người dùng "{confirmUnlock.user?.fullName || confirmUnlock.user?.email}" không? Người dùng sẽ được phép đăng nhập lại.
+          </p>
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" onClick={() => setConfirmUnlock({ isOpen: false, user: null })} className="flex-1">
+              Hủy
+            </Button>
+            <Button variant="primary" onClick={handleUnlockUser} className="flex-1">
+              Mở khóa
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };

@@ -51,4 +51,5 @@ export const api = {
       body: body instanceof FormData ? body : JSON.stringify(body),
     }),
   delete: (endpoint: string) => fetcher(endpoint, { method: 'DELETE' }),
+  upload: (endpoint: string, body: FormData) => fetcher(endpoint, { method: 'POST', body }),
 };

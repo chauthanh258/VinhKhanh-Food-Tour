@@ -12,26 +12,85 @@ export const getUserById = async (id: string) => {
   return user;
 };
 
-export const updateUserStatus = async (id: string, isActive: boolean, adminId: string) => {
+export const updateUserStatus = async (
+  id: string,
+  isActive: boolean,
+  adminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
   const user = await prisma.user.update({
     where: { id },
     data: { isActive },
   });
   try {
-    await logAdminAction(adminId, 'UPDATE_USER_STATUS', id, { isActive });
+    await logAdminAction(adminId, 'UPDATE_USER_STATUS', id, { isActive }, undefined, undefined, ipAddress, userAgent);
   } catch (e) { /* ignore */ }
   return user;
 };
 
-export const deleteUser = async (id: string, adminId: string) => {
-  const user = await prisma.user.update({
+export const updateUser = async (id: string, adminId: string, data: any, ipAddress?: string, userAgent?: string) => {
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) throw new AppError(404, 'User not found');
+
+  const { fullName, email, role, isActive } = data;
+
+  if (role && role !== user.role) {
+    const isValidRoleChange =
+      (user.role === 'USER' && role === 'OWNER') ||
+      (user.role === 'OWNER' && role === 'USER');
+
+    if (!isValidRoleChange) {
+      throw new AppError(400, 'Invalid role change. Chỉ có thể thay đổi giữa USER và OWNER.');
+    }
+  }
+
+  const oldValue = {
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    isActive: user.isActive,
+  };
+
+  const updatedUser = await prisma.user.update({
+    where: { id },
+    data: {
+      ...(fullName !== undefined && { fullName }),
+      ...(email !== undefined && { email }),
+      ...(role !== undefined && { role }),
+      ...(isActive !== undefined && { isActive }),
+    },
+  });
+
+  const newValue = {
+    fullName: updatedUser.fullName,
+    email: updatedUser.email,
+    role: updatedUser.role,
+    isActive: updatedUser.isActive,
+  };
+
+  try {
+    await logAdminAction(adminId, 'UPDATE_USER', id, { fullName: updatedUser.fullName, email: updatedUser.email }, oldValue, newValue, ipAddress, userAgent);
+  } catch (e) { /* ignore */ }
+
+  return updatedUser;
+};
+
+export const deleteUser = async (
+  id: string,
+  adminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
+  const user = await prisma.user.findUnique({ where: { id } });
+  const userUpdate = await prisma.user.update({
     where: { id },
     data: { deletedAt: new Date(), isActive: false },
   });
   try {
-    await logAdminAction(adminId, 'SOFT_DELETE_USER', id);
+    await logAdminAction(adminId, 'SOFT_DELETE_USER', id, { fullName: user?.fullName, email: user?.email }, undefined, undefined, ipAddress, userAgent);
   } catch (e) { /* ignore */ }
-  return user;
+  return userUpdate;
 };
 
 // POI Actions
@@ -49,11 +108,41 @@ export const getAllPOIs = async (skip: number = 0, take: number = 20) => {
           },
         },
         translations: true,
+        _count: { select: { menuItems: true } },
       },
     }),
     prisma.pOI.count(),
   ]);
   return { pois, total };
+};
+
+export const getPendingRequests = async () => {
+  const [pendingPOIs, pendingUsers] = await Promise.all([
+    prisma.pOI.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        owner: { select: { id: true, email: true, fullName: true } },
+        category: { include: { translations: true } },
+        translations: true,
+      },
+      orderBy: { submittedAt: 'desc' },
+    }),
+    prisma.user.findMany({
+      where: { requestedRole: 'OWNER', deletedAt: null },
+      select: { id: true, email: true, fullName: true, role: true, requestedRole: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    }),
+  ]);
+
+  return {
+    pendingPOIs: pendingPOIs.length,
+    pendingUsers: pendingUsers.length,
+    totalPending: pendingPOIs.length + pendingUsers.length,
+    details: {
+      pois: pendingPOIs,
+      users: pendingUsers,
+    },
+  };
 };
 
 export const getPOIById = async (id: string) => {
@@ -74,14 +163,28 @@ export const getPOIById = async (id: string) => {
   return poi;
 };
 
-export const createPOI = async (adminId: string, data: any) => {
-  const { lat, lng, categoryId, translations } = data;
+export const createPOI = async (
+  adminId: string,
+  data: any,
+  ipAddress?: string,
+  userAgent?: string
+) => {
+  const { lat, lng, categoryId, ownerId, translations } = data;
+
+  if (ownerId) {
+    const owner = await prisma.user.findUnique({ where: { id: ownerId } });
+    if (!owner || owner.role !== 'OWNER') {
+      throw new AppError(400, 'Invalid owner. Chỉ có thể chọn user role OWNER.');
+    }
+  }
 
   const poi = await prisma.pOI.create({
     data: {
       lat,
       lng,
+      ownerId: ownerId || null,
       categoryId: categoryId || null,
+      status: 'APPROVED',
       isActive: true,
     },
     include: {
@@ -100,17 +203,48 @@ export const createPOI = async (adminId: string, data: any) => {
   }
 
   try {
-    await logAdminAction(adminId, 'CREATE_POI', poi.id);
+    const poiName = poi?.translations?.[0]?.name || `POI ${poi.id.slice(0, 8)}`;
+    await logAdminAction(
+      adminId,
+      'CREATE_POI',
+      poi.id,
+      { name: poiName },
+      null,
+      null,
+      ipAddress,
+      userAgent
+    );
   } catch (e) { /* ignore */ }
 
   return getPOIById(poi.id);
 };
 
-export const updatePOIAsAdmin = async (id: string, adminId: string, data: any) => {
+export const updatePOIAsAdmin = async (
+  id: string,
+  adminId: string,
+  data: any,
+  ipAddress?: string,
+  userAgent?: string
+) => {
   const poi = await prisma.pOI.findUnique({ where: { id } });
   if (!poi) throw new AppError(404, 'POI not found');
 
-  const { lat, lng, categoryId, translations, isActive } = data;
+  const { lat, lng, categoryId, ownerId, isActive, translations } = data;
+
+  if (ownerId !== undefined && ownerId !== null) {
+    const owner = await prisma.user.findUnique({ where: { id: ownerId } });
+    if (!owner || owner.role !== 'OWNER') {
+      throw new AppError(400, 'Invalid owner. Chỉ có thể chọn user role OWNER.');
+    }
+  }
+
+  const oldValue = {
+    lat: poi.lat,
+    lng: poi.lng,
+    categoryId: poi.categoryId,
+    ownerId: poi.ownerId,
+    isActive: poi.isActive,
+  };
 
   const updatedPoi = await prisma.pOI.update({
     where: { id },
@@ -118,45 +252,218 @@ export const updatePOIAsAdmin = async (id: string, adminId: string, data: any) =
       ...(lat !== undefined && { lat }),
       ...(lng !== undefined && { lng }),
       ...(categoryId !== undefined && { categoryId: categoryId || null }),
+      ...(ownerId !== undefined && { ownerId: ownerId || null }),
       ...(isActive !== undefined && { isActive }),
     },
   });
 
   if (translations && Array.isArray(translations) && translations.length > 0) {
-    const { language, ...transData } = translations[0];
-    await translationRepo.upsertTranslation(id, transData);
+    const translation = translations[0];
+    const { language, ...transData } = translation;
+    await translationRepo.upsertTranslation(id, {
+      ...transData,
+      language,
+    });
   }
 
+  const newValue = {
+    lat: updatedPoi.lat,
+    lng: updatedPoi.lng,
+    categoryId: updatedPoi.categoryId,
+    ownerId: updatedPoi.ownerId,
+    isActive: updatedPoi.isActive,
+  };
+
+  const poiTranslation = await prisma.pOITranslation.findFirst({ where: { poiId: id } });
+  const poiName = poiTranslation?.name || 'POI';
+
   try {
-    await logAdminAction(adminId, 'UPDATE_POI', id);
+    await logAdminAction(adminId, 'UPDATE_POI', id, { name: poiName }, oldValue, newValue, ipAddress, userAgent);
   } catch (e) { /* ignore */ }
 
   return getPOIById(id);
 };
 
-export const updatePOIStatus = async (id: string, isActive: boolean, adminId: string) => {
+export const updatePOIStatus = async (
+  id: string,
+  isActive: boolean,
+  adminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
   const poi = await prisma.pOI.update({
     where: { id },
     data: { isActive },
   });
+  const poiTranslation = await prisma.pOITranslation.findFirst({ where: { poiId: id } });
+  const poiName = poiTranslation?.name || 'POI';
   try {
-    await logAdminAction(adminId, 'UPDATE_POI_STATUS', id, { isActive });
+    await logAdminAction(adminId, 'UPDATE_POI_STATUS', id, { name: poiName, isActive }, undefined, undefined, ipAddress, userAgent);
   } catch (e) { /* ignore */ }
   return poi;
 };
 
-export const deletePOI = async (id: string, adminId: string) => {
-  const poi = await prisma.pOI.update({
+export const approvePOI = async (
+  id: string,
+  status: 'APPROVED' | 'REJECTED',
+  adminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
+  const poi = await prisma.pOI.findUnique({ where: { id } });
+  if (!poi) throw new AppError(404, 'POI not found');
+
+  if (poi.status !== 'PENDING') {
+    throw new AppError(400, 'POI is not pending approval');
+  }
+
+  const oldValue = { status: poi.status, isActive: poi.isActive };
+
+  const updatedPoi = await prisma.pOI.update({
+    where: { id },
+    data: {
+      status,
+      isActive: status === 'APPROVED',
+    },
+  });
+
+  const newValue = { status: updatedPoi.status, isActive: updatedPoi.isActive };
+  const poiTranslation = await prisma.pOITranslation.findFirst({ where: { poiId: id } });
+  const poiName = poiTranslation?.name || 'POI';
+
+  try {
+    await logAdminAction(adminId, 'APPROVE_POI', id, { name: poiName, decision: status }, oldValue, newValue, ipAddress, userAgent);
+  } catch (e) { /* ignore */ }
+
+  return getPOIById(id);
+};
+
+export const deletePOI = async (
+  id: string,
+  adminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
+  const poi = await prisma.pOI.findUnique({ where: { id }, include: { translations: true } });
+  const poiUpdate = await prisma.pOI.update({
     where: { id },
     data: { deletedAt: new Date(), isActive: false },
   });
   try {
-    await logAdminAction(adminId, 'SOFT_DELETE_POI', id);
+    const poiName = poi?.translations?.[0]?.name || `POI ${id.slice(0, 8)}`;
+    await logAdminAction(adminId, 'SOFT_DELETE_POI', id, { name: poiName }, undefined, undefined, ipAddress, userAgent);
   } catch (e) { /* ignore */ }
-  return poi;
+  return poiUpdate;
 };
 
 // System Stats
+
+export const approvePendingPOI = async (
+  id: string,
+  adminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
+  const poi = await prisma.pOI.findUnique({ where: { id } });
+  if (!poi || poi.status !== 'PENDING') throw new AppError(404, 'POI request not found');
+
+  const updatedPoi = await prisma.pOI.update({
+    where: { id },
+    data: {
+      status: 'APPROVED',
+      isActive: true,
+      approvedAt: new Date(),
+    },
+  });
+
+  try {
+    await logAdminAction(adminId, 'APPROVE_POI', id, undefined, { status: 'PENDING' }, { status: 'APPROVED' }, ipAddress, userAgent);
+  } catch (e) { /* ignore */ }
+
+  return updatedPoi;
+};
+
+export const rejectPendingPOI = async (
+  id: string,
+  adminId: string,
+  rejectionReason: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
+  const poi = await prisma.pOI.findUnique({ where: { id } });
+  if (!poi || poi.status !== 'PENDING') throw new AppError(404, 'POI request not found');
+
+  const updatedPoi = await prisma.pOI.update({
+    where: { id },
+    data: {
+      status: 'REJECTED',
+      rejectedAt: new Date(),
+      rejectionReason,
+      isActive: false,
+    },
+  });
+
+  const poiTranslation = await prisma.pOITranslation.findFirst({ where: { poiId: id } });
+  const poiName = poiTranslation?.name || 'POI';
+  try {
+    await logAdminAction(adminId, 'REJECT_POI', id, { name: poiName, rejectionReason }, { status: 'PENDING' }, { status: 'REJECTED' }, ipAddress, userAgent);
+  } catch (e) { /* ignore */ }
+
+  return updatedPoi;
+};
+
+export const approveUserUpgrade = async (
+  id: string,
+  adminId: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user || user.requestedRole !== 'OWNER') throw new AppError(404, 'Upgrade request not found');
+  if (user.role !== 'USER') throw new AppError(400, 'Only USER can be upgraded to OWNER');
+
+  const oldValue = { role: user.role, requestedRole: user.requestedRole };
+  const updatedUser = await prisma.user.update({
+    where: { id },
+    data: {
+      role: 'OWNER',
+      requestedRole: null,
+    },
+  });
+
+  const newValue = { role: updatedUser.role, requestedRole: updatedUser.requestedRole };
+
+  try {
+    await logAdminAction(adminId, 'APPROVE_USER_UPGRADE', id, undefined, oldValue, newValue, ipAddress, userAgent);
+  } catch (e) { /* ignore */ }
+
+  return updatedUser;
+};
+
+export const rejectUserUpgrade = async (
+  id: string,
+  adminId: string,
+  rejectionReason: string,
+  ipAddress?: string,
+  userAgent?: string
+) => {
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user || user.requestedRole !== 'OWNER') throw new AppError(404, 'Upgrade request not found');
+
+  const updatedUser = await prisma.user.update({
+    where: { id },
+    data: {
+      requestedRole: null,
+    },
+  });
+
+  try {
+    await logAdminAction(adminId, 'REJECT_USER_UPGRADE', id, { rejectionReason }, { requestedRole: 'OWNER' }, { requestedRole: null }, ipAddress, userAgent);
+  } catch (e) { /* ignore */ }
+
+  return updatedUser;
+};
+
 export const getSystemStats = async () => {
   const [totalUsers, totalPOIs, totalMenuItems, activePOIs, adminCount, totalCategories] = await Promise.all([
     prisma.user.count({ where: { deletedAt: null } }),

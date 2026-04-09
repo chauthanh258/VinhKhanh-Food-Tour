@@ -8,28 +8,49 @@ export const getAllCategories = async (includeInactive: boolean = false) => {
       where,
       include: {
         translations: true,
-        _count: {
-          select: { pois: true },
-        },
       },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.category.count({ where }),
   ]);
 
-  return { categories, total };
+  const activePoiCounts = await prisma.pOI.groupBy({
+    by: ['categoryId'],
+    where: {
+      categoryId: { in: categories.map((category) => category.id) },
+      isActive: true,
+    },
+    _count: { _all: true },
+  });
+
+  const countsByCategoryId = new Map(activePoiCounts.map((item) => [item.categoryId, item._count._all]));
+
+  const categoriesWithActiveCount = categories.map((category) => ({
+    ...category,
+    _count: { pois: countsByCategoryId.get(category.id) ?? 0 },
+  }));
+
+  return { categories: categoriesWithActiveCount, total };
 };
 
 export const getCategoryById = async (id: string) => {
-  return prisma.category.findUnique({
+  const category = await prisma.category.findUnique({
     where: { id },
     include: {
       translations: true,
-      _count: {
-        select: { pois: true },
-      },
     },
   });
+
+  if (!category) return null;
+
+  const activePoiCount = await prisma.pOI.count({
+    where: { categoryId: id, isActive: true },
+  });
+
+  return {
+    ...category,
+    _count: { pois: activePoiCount },
+  };
 };
 
 export const createCategory = async (
@@ -111,22 +132,45 @@ export const updateCategory = async (
     }
   }
 
-  return prisma.category.findUnique({
+  const updatedCategory = await prisma.category.findUnique({
     where: { id: categoryId },
     include: {
       translations: true,
-      _count: { select: { pois: true } },
     },
   });
+
+  // Tính lại số lượng POI hoạt động sau khi cập nhật
+  const activePoiCount = await prisma.pOI.count({
+    where: { categoryId: categoryId, isActive: true },
+  });
+
+  return {
+    ...updatedCategory,
+    _count: { pois: activePoiCount },
+  };
 };
 
 export const deleteCategory = async (adminId: string, categoryId: string) => {
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
+    include: { translations: true },
   });
 
   if (!category) {
     throw new Error('Category not found');
+  }
+
+  // Chỉ kiểm tra POI đang hoạt động, POI tạm ngưng không ngăn cản xóa danh mục
+  const activePoiCount = await prisma.pOI.count({
+    where: {
+      categoryId: categoryId,
+      isActive: true,
+      deletedAt: null,
+    },
+  });
+
+  if (activePoiCount > 0) {
+    throw new Error(`Không thể xóa danh mục vì còn ${activePoiCount} POI hoạt động thuộc danh mục này. Vui lòng chuyển POI sang danh mục khác hoặc tạm ngưng POI trước.`);
   }
 
   return prisma.category.update({
@@ -135,11 +179,12 @@ export const deleteCategory = async (adminId: string, categoryId: string) => {
       deletedAt: new Date(),
       isActive: false,
     },
+    include: { translations: true },
   });
 };
 
 export const restoreCategory = async (adminId: string, categoryId: string) => {
-  return prisma.category.update({
+  const restoredCategory = await prisma.category.update({
     where: { id: categoryId },
     data: {
       deletedAt: null,
@@ -147,7 +192,16 @@ export const restoreCategory = async (adminId: string, categoryId: string) => {
     },
     include: {
       translations: true,
-      _count: { select: { pois: true } },
     },
   });
+
+  // Tính lại số lượng POI hoạt động sau khi khôi phục
+  const activePoiCount = await prisma.pOI.count({
+    where: { categoryId: categoryId, isActive: true },
+  });
+
+  return {
+    ...restoredCategory,
+    _count: { pois: activePoiCount },
+  };
 };

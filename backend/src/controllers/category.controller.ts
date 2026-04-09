@@ -108,7 +108,8 @@ export const deleteCategory = async (
     const category = await categoryService.deleteCategory(adminId, req.params.id);
 
     try {
-      await auditService.logAdminAction(adminId, 'DELETE_CATEGORY', req.params.id, {});
+      const categoryName = category?.translations?.[0]?.name || category?.id || 'category';
+      await auditService.logAdminAction(adminId, 'DELETE_CATEGORY', req.params.id, { name: categoryName });
     } catch (auditError) {
       console.error('Failed to log audit action:', auditError);
     }
@@ -132,7 +133,8 @@ export const restoreCategory = async (
     const category = await categoryService.restoreCategory(adminId, req.params.id);
 
     try {
-      await auditService.logAdminAction(adminId, 'RESTORE_CATEGORY', req.params.id, {});
+      const categoryName = category.translations?.[0]?.name || category.id;
+      await auditService.logAdminAction(adminId, 'RESTORE_CATEGORY', req.params.id, { name: categoryName });
     } catch (auditError) {
       console.error('Failed to log audit action:', auditError);
     }

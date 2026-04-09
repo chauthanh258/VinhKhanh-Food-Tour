@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import * as poiService from '../services/poi.service';
 import { sendResponse } from '../utils/response.util';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
+import { AppError } from '../middlewares/error.middleware';
 
 export const getNearbyPOIs = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -106,6 +107,42 @@ export const getOwnerPOIs = async (req: AuthenticatedRequest, res: Response, nex
 
     const result = await poiService.listOwnerPOIs(userId, filters);
     sendResponse(res, 200, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadPOIImage = async (
+  req: AuthenticatedRequest & { file?: Express.Multer.File },
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.file) {
+      throw new AppError(400, 'No image file uploaded');
+    }
+
+    const configuredBaseUrl = process.env.PUBLIC_BASE_URL?.replace(/\/+$/, '');
+    let baseUrl = configuredBaseUrl || `${req.protocol}://${req.get('host')}`;
+    // If someone configures PUBLIC_BASE_URL as "http://host:port/api",
+    // strip the trailing /api because static files are served at /img_modules.
+    baseUrl = baseUrl.replace(/\/api$/, '');
+
+    const imageUrl = `${baseUrl}/img_modules/poi/${req.file.filename}`;
+
+    sendResponse(res, 201, { imageUrl }, 'Image uploaded successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const requestDeletePOI = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+    const userRole = req.user!.role;
+    const poi = await poiService.requestDeletePOI(id, userId, userRole);
+    sendResponse(res, 200, poi, 'POI deletion request submitted successfully');
   } catch (error) {
     next(error);
   }

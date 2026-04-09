@@ -112,6 +112,30 @@ router.get('/owner/list', authenticate, authorize(['OWNER', 'ADMIN']), poiContro
 
 /**
  * @swagger
+ * /pois/upload-image:
+ *   post:
+ *     summary: Upload a POI image
+ *     tags: [Owner]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Image uploaded successfully
+ */
+router.post('/upload-image', authenticate, authorize(['OWNER', 'ADMIN']), poiMediaUpload.single('image'), poiController.uploadPOIImage);
+
+/**
+ * @swagger
  * /pois/{id}/translate-tts:
  *   get:
  *     summary: Get translated description and TTS audio base64 for POI
@@ -230,5 +254,24 @@ router.post(
  *         description: POI deleted
  */
 router.delete('/:id', authenticate, authorize(['OWNER', 'ADMIN']), poiController.deletePOI);
+
+/**
+ * @swagger
+ * /pois/{id}/request-delete:
+ *   post:
+ *     summary: Request POI deletion (Owner only)
+ *     tags: [Owner]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     responses:
+ *       200:
+ *         description: POI deletion request submitted
+ */
+router.post('/:id/request-delete', authenticate, authorize(['OWNER']), poiController.requestDeletePOI);
 
 export default router;

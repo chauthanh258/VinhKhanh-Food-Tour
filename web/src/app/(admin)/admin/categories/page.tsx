@@ -30,6 +30,8 @@ const CategoryManager = () => {
     isActive: true,
   });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [restoreConfirm, setRestoreConfirm] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showInactive, setShowInactive] = useState(false);
 
   useEffect(() => {
@@ -57,7 +59,6 @@ const CategoryManager = () => {
             description: formData.description,
             language: formData.language,
           }],
-          isActive: formData.isActive,
         });
         addToast('Danh mục đã được cập nhật thành công', 'success');
       } else {
@@ -106,6 +107,16 @@ const CategoryManager = () => {
     }
   };
 
+  const handleDeleteClick = (category: any) => {
+    // Check if category has active POIs (POI tạm ngưng không ngăn cản xóa)
+    const activePoiCount = category._count?.pois || 0;
+    if (activePoiCount > 0) {
+      setDeleteError(`Không thể xóa danh mục vì còn ${activePoiCount} POI hoạt động thuộc danh mục này. Vui lòng chuyển POI sang danh mục khác hoặc tạm ngưng POI trước.`);
+      return;
+    }
+    setDeleteConfirm(category.id);
+  };
+
   const handleRestore = async (id: string) => {
     try {
       await restoreCategory(id);
@@ -117,6 +128,16 @@ const CategoryManager = () => {
     }
   };
 
+  const handleRestoreConfirmed = async () => {
+    if (!restoreConfirm) return;
+    try {
+      await handleRestore(restoreConfirm);
+      setRestoreConfirm(null);
+    } catch (err) {
+      console.error('Failed to restore category:', err);
+    }
+  };
+
   const handleNewCategory = () => {
     setEditingCategory(null);
     setFormData({ name: '', description: '', language: 'vi', isActive: true });
@@ -125,7 +146,6 @@ const CategoryManager = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2 text-foreground">
@@ -191,7 +211,7 @@ const CategoryManager = () => {
 
               <div className="mb-4 pt-4 border-t border-border">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">POI trong danh mục</span>
+                  <span className="text-sm text-muted-foreground">POI hoạt động trong danh mục</span>
                   <span className="text-sm font-medium">{poiCount}</span>
                 </div>
               </div>
@@ -210,7 +230,7 @@ const CategoryManager = () => {
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={() => setDeleteConfirm(category.id)}
+                    onClick={() => handleDeleteClick(category)}
                     className="flex-1 flex items-center justify-center gap-2 font-semibold"
                   >
                     <Trash2 size={18} />
@@ -220,7 +240,7 @@ const CategoryManager = () => {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => handleRestore(category.id)}
+                    onClick={() => setRestoreConfirm(category.id)}
                     className="flex-1 flex items-center justify-center gap-2 font-semibold"
                   >
                     <RefreshCw size={18} />
@@ -293,8 +313,7 @@ const CategoryManager = () => {
             <div className="flex items-center gap-4 p-4 bg-red-500/10 rounded-lg border border-red-500/20">
               <AlertTriangle size={24} className="text-red-500" />
               <div className="flex-1">
-                <p className="font-medium text-red-500">Bạn chắc chắn muốn xóa danh mục này?</p>
-                <p className="text-sm text-red-400 mt-1">Hành động này có thể khôi phục được.</p>
+                <p className="font-medium text-red-500">Bạn có chắc muốn xóa danh mục này?</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -303,6 +322,42 @@ const CategoryManager = () => {
               </Button>
               <Button variant="danger" onClick={handleDelete} className="flex-1" disabled={loading}>
                 Xóa
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {deleteError && (
+        <Dialog isOpen={true} onClose={() => setDeleteError(null)} title="Không thể xóa danh mục">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-orange-500/10 rounded-lg border border-orange-500/20">
+              <AlertTriangle size={24} className="text-orange-500" />
+              <div className="flex-1">
+                <p className="text-orange-700">{deleteError}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="primary" onClick={() => setDeleteError(null)} className="flex-1">
+                Đã hiểu
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {restoreConfirm && (
+        <Dialog isOpen={true} onClose={() => setRestoreConfirm(null)} title="Xác nhận khôi phục danh mục">
+          <div className="space-y-4">
+            <p className="text-muted-foreground">
+              Bạn có chắc muốn khôi phục danh mục này không? Danh mục sẽ hiển thị trở lại trong danh sách.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setRestoreConfirm(null)} className="flex-1">
+                Hủy
+              </Button>
+              <Button variant="primary" onClick={handleRestoreConfirmed} className="flex-1" disabled={loading}>
+                Khôi phục
               </Button>
             </div>
           </div>
