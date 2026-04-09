@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Volume2, VolumeX, ChevronDown, MapPin, Star, DollarSign, Utensils, Play, Pause, SkipForward, ChevronUp, X } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -410,7 +410,7 @@ function ReopenButton({ poi, onClick }: { poi: POI; onClick: () => void }) {
 }
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
-export default function TourPage() {
+function TourPageContent() {
   const language = useUserStore((s) => s.language);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -621,5 +621,13 @@ export default function TourPage() {
       {/* Hidden Audio Element */}
       <audio ref={audioRef} />
     </div>
+  );
+}
+
+export default function TourPage() {
+  return (
+    <Suspense fallback={<div className="flex h-[calc(100vh-72px)] items-center justify-center bg-black text-zinc-400">Loading tour...</div>}>
+      <TourPageContent />
+    </Suspense>
   );
 }
