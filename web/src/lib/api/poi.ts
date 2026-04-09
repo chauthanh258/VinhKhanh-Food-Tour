@@ -7,6 +7,8 @@ export interface POITranslation {
   specialties?: string;
   priceRange?: string;
   language: string;
+  audioUrl?: string;
+  imageUrl?: string;
 }
 
 export interface POIOwner {
@@ -64,6 +66,8 @@ export const poiApi = {
       specialties?: string;
       priceRange?: string;
       language: string;
+      audioUrl?: string;
+      imageUrl?: string;
     }>;
   }) => {
     const response = await api.post('/admin/pois', data);
@@ -83,6 +87,8 @@ export const poiApi = {
         specialties?: string;
         priceRange?: string;
         language: string;
+        audioUrl?: string;
+        imageUrl?: string;
       }>;
     }
   ) => {

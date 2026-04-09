@@ -26,8 +26,8 @@ interface POI {
     description: string;
     specialties: string;
     priceRange: string;
-    audioUrl: string;
-    imageUrl: string;
+    audioUrl?: string;
+    imageUrl?: string;
   };
 }
 
@@ -535,7 +535,7 @@ function TourPageContent() {
                if (!prev || prev.id !== nextPoi.id) return prev;
                return { ...prev, translation: { ...prev.translation, description: data.data.text } };
             });
-            audio.src = data.data.audioBase64;
+            audio.src = data.data.audioUrl || data.data.audioBase64;
             await audio.play().catch((e) => {
               console.warn('Autoplay blocked:', e);
               next();
@@ -626,7 +626,13 @@ function TourPageContent() {
 
 export default function TourPage() {
   return (
-    <Suspense fallback={<div className="flex h-[calc(100vh-72px)] items-center justify-center bg-black text-zinc-400">Loading tour...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex h-[calc(100vh-72px)] items-center justify-center bg-black text-zinc-400">
+          Đang tải tour...
+        </div>
+      }
+    >
       <TourPageContent />
     </Suspense>
   );

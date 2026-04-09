@@ -49,6 +49,7 @@ interface POIItem {
     description?: string;
     specialties?: string;
     imageUrl?: string;
+    audioUrl?: string;
   }>;
 }
 
@@ -73,6 +74,9 @@ export default function POIManagement() {
     lat: 0,
     lng: 0,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
   const selectedPosition: [number, number] =
@@ -93,6 +97,22 @@ export default function POIManagement() {
       mapInstance.off("click", handleMapClick);
     };
   }, [mapInstance, modalMode]);
+
+  useEffect(() => {
+    if (!imageFile) {
+      if (!selectedPoi?.translations?.[0]?.imageUrl) {
+        setImagePreview(null);
+      }
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreview(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [imageFile, selectedPoi]);
 
   // Fetch POIs
   const fetchPOIs = useCallback(async () => {
@@ -140,9 +160,15 @@ export default function POIManagement() {
         lat: poi.lat,
         lng: poi.lng,
       });
+      setImageFile(null);
+      setAudioFile(null);
+      setImagePreview(poi.translations?.[0]?.imageUrl || null);
     } else {
       setSelectedPoi(null);
       setFormData({ name: "", address: "", specialties: "", description: "", lat: 0, lng: 0 });
+      setImageFile(null);
+      setAudioFile(null);
+      setImagePreview(null);
     }
     setIsModalOpen(true);
   };
@@ -151,6 +177,9 @@ export default function POIManagement() {
     setIsModalOpen(false);
     setSelectedPoi(null);
     setFormData({ name: "", address: "", specialties: "", description: "", lat: 0, lng: 0 });
+    setImageFile(null);
+    setAudioFile(null);
+    setImagePreview(null);
   };
 
   const handleSave = async () => {
@@ -175,9 +204,22 @@ export default function POIManagement() {
       };
 
       if (modalMode === "add") {
-        await api.post("/pois", payload);
+        const createResponse = await api.post("/pois", payload);
+        const createdPoiId = createResponse?.data?.id;
+        if (createdPoiId && (imageFile || audioFile)) {
+          const mediaFormData = new FormData();
+          if (imageFile) mediaFormData.append("image", imageFile);
+          if (audioFile) mediaFormData.append("audio", audioFile);
+          await api.post(`/pois/${createdPoiId}/media`, mediaFormData);
+        }
       } else if (modalMode === "edit" && selectedPoi) {
         await api.put(`/pois/${selectedPoi.id}`, payload);
+        if (imageFile || audioFile) {
+          const mediaFormData = new FormData();
+          if (imageFile) mediaFormData.append("image", imageFile);
+          if (audioFile) mediaFormData.append("audio", audioFile);
+          await api.post(`/pois/${selectedPoi.id}/media`, mediaFormData);
+        }
       }
 
       handleCloseModal();
@@ -641,6 +683,59 @@ export default function POIManagement() {
                 className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-orange-500/20 outline-none disabled:opacity-60 resize-none"
                 placeholder="Tell us about your restaurant..."
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  POI Image
+                </label>
+                <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-800/40 space-y-3">
+                  <div className="h-40 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="POI preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-400">No image selected</span>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={modalMode === "view"}
+                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-xl file:border-0 file:bg-orange-500 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-orange-600 disabled:opacity-60"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  Narration Audio
+                </label>
+                <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-800/40 space-y-3">
+                  <div className="h-40 rounded-xl bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-center px-4">
+                    <div>
+                      <p className="font-semibold text-gray-700 dark:text-gray-200">
+                        {audioFile ? audioFile.name : selectedPoi?.translations?.[0]?.audioUrl ? "Uploaded audio available" : "No audio selected"}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Upload an MP3, WAV, or M4A narration file.
+                      </p>
+                    </div>
+                  </div>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    disabled={modalMode === "view"}
+                    onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-xl file:border-0 file:bg-orange-500 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-orange-600 disabled:opacity-60"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}

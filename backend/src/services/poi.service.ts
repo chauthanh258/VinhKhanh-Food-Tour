@@ -4,6 +4,7 @@ import { AppError } from '../middlewares/error.middleware';
 import { dbLangToGoogleTts, normalizeUiLangToDbLang } from '../utils/language.util';
 import { synthesizeTextToMp3Buffer } from './tts.service';
 import { translate } from '@vitalets/google-translate-api';
+import { destroyCloudinaryAsset, uploadAudioBuffer, uploadImageBuffer } from '../utils/cloudinary';
 
 const TRANSLATION_CACHE_TTL_MS = 10_000;
 type CachedTranslationTts = { text: string; audioBase64: string; expiresAt: number };
@@ -59,6 +60,67 @@ export const updatePOIAsOwner = async (poiId: string, userId: string, userRole: 
   }
 
   return poiRepo.findPOIById(poiId);
+};
+
+export const uploadPOIMedia = async (
+  poiId: string,
+  userId: string,
+  userRole: string,
+  files: {
+    image?: Express.Multer.File[];
+    audio?: Express.Multer.File[];
+  }
+) => {
+  const poi = await poiRepo.findPOIById(poiId);
+  if (!poi) throw new AppError(404, 'POI not found');
+
+  if (userRole !== 'ADMIN' && poi.ownerId !== userId) {
+    throw new AppError(403, 'You do not have permission to update this POI');
+  }
+
+  const translation = poi.translations?.[0];
+  if (!translation) {
+    throw new AppError(404, 'POI translation not found');
+  }
+
+  const imageFile = files.image?.[0];
+  const audioFile = files.audio?.[0];
+
+  if (!imageFile && !audioFile) {
+    throw new AppError(400, 'No media file uploaded');
+  }
+
+  const nextData: Record<string, string | undefined> = {};
+  const cleanupTasks: Array<Promise<void>> = [];
+
+  if (imageFile) {
+    const uploadedImage = await uploadImageBuffer(
+      imageFile.buffer,
+      `poi-${poiId}-image-${Date.now()}`
+    );
+    nextData.imageUrl = uploadedImage.secure_url;
+    nextData.imagePublicId = uploadedImage.public_id;
+    if (translation.imagePublicId) {
+      cleanupTasks.push(destroyCloudinaryAsset(translation.imagePublicId, 'image'));
+    }
+  }
+
+  if (audioFile) {
+    const uploadedAudio = await uploadAudioBuffer(
+      audioFile.buffer,
+      `poi-${poiId}-audio-${Date.now()}`
+    );
+    nextData.audioUrl = uploadedAudio.secure_url;
+    nextData.audioPublicId = uploadedAudio.public_id;
+    if (translation.audioPublicId) {
+      cleanupTasks.push(destroyCloudinaryAsset(translation.audioPublicId, 'video'));
+    }
+  }
+
+  const updatedTranslation = await translationRepo.updateTranslationByPoiId(poiId, nextData);
+  await Promise.all(cleanupTasks);
+
+  return updatedTranslation;
 };
 
 export const deletePOI = async (poiId: string, userId: string, userRole: string) => {
@@ -137,6 +199,14 @@ export const getTranslatedDescriptionAndTts = async (poiId: string, uiLang: stri
     throw new AppError(404, 'No description available for TTS');
   }
 
+  if (defaultTranslation.audioUrl) {
+    return {
+      text,
+      audioUrl: defaultTranslation.audioUrl,
+      audioSource: 'custom',
+    };
+  }
+
   const dbLang = normalizeUiLangToDbLang(uiLang);
   if (dbLang !== 'vi') {
     try {
@@ -153,7 +223,8 @@ export const getTranslatedDescriptionAndTts = async (poiId: string, uiLang: stri
   
   const result = {
     text,
-    audioBase64: `data:audio/mpeg;base64,${audioBase64}`
+    audioBase64: `data:audio/mpeg;base64,${audioBase64}`,
+    audioSource: 'generated'
   };
   translationCache.set(cacheKey, {
     ...result,

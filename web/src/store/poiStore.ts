@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { poiApi, POI } from '@/lib/api/poi';
+import { api } from '@/lib/api';
 
 interface POIState {
   pois: POI[];
@@ -9,6 +10,7 @@ interface POIState {
   fetchPOIs: (filter?: { skip?: number; take?: number }) => Promise<void>;
   createPOI: (data: any) => Promise<void>;
   updatePOI: (id: string, data: any) => Promise<void>;
+  uploadPOIMedia: (id: string, data: FormData) => Promise<void>;
   updatePOIStatus: (id: string, isActive: boolean) => Promise<void>;
   deletePOI: (id: string) => Promise<void>;
   getPOIName: (poi: POI) => string;
@@ -53,6 +55,17 @@ export const usePOIStore = create<POIState>((set, get) => ({
       await get().fetchPOIs();
     } catch (error: any) {
       set({ error: error.message || 'Failed to update POI', loading: false });
+      throw error;
+    }
+  },
+
+  uploadPOIMedia: async (id, data) => {
+    set({ loading: true, error: null });
+    try {
+      await api.post(`/pois/${id}/media`, data);
+      await get().fetchPOIs();
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to upload POI media', loading: false });
       throw error;
     }
   },
