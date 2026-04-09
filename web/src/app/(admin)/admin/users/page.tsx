@@ -38,7 +38,7 @@ const UserManager = () => {
   const [userForm, setUserForm] = useState({
     fullName: '',
     email: '',
-    role: 'USER',
+    role: 'USER' as 'ADMIN' | 'OWNER' | 'USER',
     isActive: true,
   });
   const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; user: any }>({ isOpen: false, user: null });
@@ -197,7 +197,7 @@ const UserManager = () => {
                     <td className="px-6 py-4 font-medium">{user.fullName || 'N/A'}</td>
                     <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={user.role === 'ADMIN' ? 'info' : user.role === 'OWNER' ? 'warning' : 'success'}>
+                      <Badge variant={user.role === 'ADMIN' ? 'default' : user.role === 'OWNER' ? 'warning' : 'success'}>
                         {user.role}
                       </Badge>
                     </td>

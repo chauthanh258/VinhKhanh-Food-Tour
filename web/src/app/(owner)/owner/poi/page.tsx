@@ -105,8 +105,6 @@ export default function POIManagement() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedPosition: [number, number] =
     formData.lat !== 0 || formData.lng !== 0
@@ -115,7 +113,7 @@ export default function POIManagement() {
 
   useEffect(() => {
     return () => {
-      if (imagePreview.startsWith("blob:")) {
+      if (imagePreview?.startsWith("blob:")) {
         URL.revokeObjectURL(imagePreview);
       }
     };
@@ -136,6 +134,19 @@ export default function POIManagement() {
       URL.revokeObjectURL(previewUrl);
     };
   }, [imageFile, selectedPoi]);
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] || null;
+    setImageFile(nextFile);
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setFormData((prev) => ({ ...prev, imageUrl: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   // Fetch POIs
   const fetchPOIs = useCallback(async () => {
@@ -201,7 +212,7 @@ export default function POIManagement() {
       setImagePreview(poi.translations?.[0]?.imageUrl || null);
     } else {
       setSelectedPoi(null);
-      setFormData({ name: "", address: "", specialties: "", description: "", lat: 0, lng: 0 });
+      setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
       setImageFile(null);
       setAudioFile(null);
       setImagePreview(null);
@@ -212,7 +223,7 @@ export default function POIManagement() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedPoi(null);
-    setFormData({ name: "", address: "", specialties: "", description: "", lat: 0, lng: 0 });
+    setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
     setImageFile(null);
     setAudioFile(null);
     setImagePreview(null);

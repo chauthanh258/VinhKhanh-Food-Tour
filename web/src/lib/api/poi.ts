@@ -109,7 +109,7 @@ export const poiApi = {
   },
 
   requestDelete: async (id: string) => {
-    const response = await api.post(`/pois/${id}/request-delete`);
+    const response = await api.post(`/pois/${id}/request-delete`, {});
     return response.data;
   },
 

@@ -62,7 +62,7 @@ const parseJson = (value?: string) => {
   }
 };
 
-const formatDetailValue = (value: any) => {
+const formatDetailValue = (value: any): string => {
   if (value === null || value === undefined) return '';
   if (typeof value === 'boolean') return value ? 'Có' : 'Không';
   if (Array.isArray(value)) return value.map(formatDetailValue).join(', ');
