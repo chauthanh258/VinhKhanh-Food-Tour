@@ -14,8 +14,8 @@ interface POI {
     description: string;
     specialties: string;
     priceRange: string;
-    audioUrl: string;
-    imageUrl: string;
+    audioUrl?: string;
+    imageUrl?: string;
   };
 }
 
@@ -43,7 +43,7 @@ export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: 
         {/* Header/Image Section */}
         <div className="relative h-64 w-full flex-shrink-0 bg-zinc-900">
            <Image 
-             src={"https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=600&auto=format&fit=crop"} 
+             src={poi.translation.imageUrl || "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=600&auto=format&fit=crop"} 
              alt={poi.translation.name}
              fill
              className="object-cover"

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Navigation, MousePointer2 } from 'lucide-react';
+import { Navigation, MousePointer2, Volume2, ChevronUp } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 import PlaceList from '@/app/(app)/tour/components/PlaceList';
@@ -16,8 +16,35 @@ const TourMap = dynamic(() => import('@/app/(app)/tour/components/TourMap'), {
   loading: () => <div className="w-full h-full bg-zinc-900 animate-pulse flex items-center justify-center text-zinc-500 font-medium">Đang tải bản đồ...</div>
 });
 
-// ─── Tour Page ─────────────────────────────────────────────────────────────
-export default function TourPage() {
+// ─── Mini Reopen Button ──────────────────────────────────────────────────────
+function ReopenButton({ poi, onClick }: { poi: POI; onClick: () => void }) {
+  return (
+    <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <button
+        onClick={onClick}
+        className="flex items-center gap-3 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-full pl-2 pr-5 py-2 shadow-2xl active:scale-95 transition-all"
+      >
+        <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-orange-500/40">
+          {poi.translation.imageUrl ? (
+            <img src={poi.translation.imageUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+              <Volume2 className="w-4 h-4 text-orange-500" />
+            </div>
+          )}
+        </div>
+        <div className="text-left">
+          <p className="text-[10px] text-orange-500 font-bold uppercase tracking-wider">Đang thuyết minh</p>
+          <p className="text-xs text-white font-semibold max-w-[140px] truncate">{poi.translation.name}</p>
+        </div>
+        <ChevronUp className="w-4 h-4 text-zinc-400 ml-1" />
+      </button>
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+function TourPageContent() {
   const language = useUserStore((s) => s.language);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -145,8 +172,11 @@ export default function TourPage() {
                if (!prev || prev.id !== nextPoi.id) return prev;
                return { ...prev, translation: { ...prev.translation, description: data.data.text } };
             });
-            audio.src = data.data.audioBase64;
-            await audio.play().catch(next);
+            audio.src = data.data.audioUrl || data.data.audioBase64;
+            await audio.play().catch((e) => {
+              console.warn('Autoplay blocked:', e);
+              next();
+            });
           } else {
             next();
           }
@@ -234,5 +264,19 @@ export default function TourPage() {
 
       <audio ref={audioRef} />
     </div>
+  );
+}
+
+export default function TourPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-[calc(100vh-72px)] items-center justify-center bg-black text-zinc-400">
+          Đang tải tour...
+        </div>
+      }
+    >
+      <TourPageContent />
+    </Suspense>
   );
 }

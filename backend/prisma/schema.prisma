@@ -7,6 +7,126 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String     @id @default(uuid()) @db.Uuid
+  email         String     @unique
+  passwordHash  String     @map("password_hash")
+  fullName      String?    @map("full_name")
+  role          Role       @default(USER)
+  language      String     @default("vi")
+  isOnboarded   Boolean    @default(false) @map("is_onboarded")
+  isActive      Boolean    @default(true) @map("is_active")
+  deletedAt     DateTime?  @map("deleted_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at")
+  requestedRole Role?      @map("requested_role")
+  auditLogs     AuditLog[] @relation("AdminAuditLogs")
+  pois          POI[]      @relation("OwnerPois")
+
+  @@map("users")
+}
+
+model POI {
+  id              String          @id @default(uuid()) @db.Uuid
+  lat             Float
+  lng             Float
+  rating          Decimal         @default(0.0) @db.Decimal(2, 1)
+  ownerId         String?         @map("owner_id") @db.Uuid
+  categoryId      String?         @map("category_id") @db.Uuid
+  isActive        Boolean         @default(true) @map("is_active")
+  deletedAt       DateTime?       @map("deleted_at")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at")
+  approvedAt      DateTime?       @map("approved_at")
+  rejectedAt      DateTime?       @map("rejected_at")
+  rejectionReason String?         @map("rejection_reason")
+  status          POIStatus       @default(APPROVED)
+  submittedAt     DateTime?       @map("submitted_at")
+  menuItems       MenuItem[]
+  translations    POITranslation[]
+  category        Category?       @relation(fields: [categoryId], references: [id])
+  owner           User?           @relation("OwnerPois", fields: [ownerId], references: [id])
+
+  @@index([lat, lng])
+  @@index([categoryId])
+  @@map("pois")
+}
+
+model Category {
+  id           String               @id @default(uuid()) @db.Uuid
+  isActive     Boolean              @default(true) @map("is_active")
+  deletedAt    DateTime?            @map("deleted_at")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @default(now()) @updatedAt @map("updated_at")
+  translations CategoryTranslation[]
+  pois         POI[]
+
+  @@map("categories")
+}
+
+model CategoryTranslation {
+  id          String   @id @default(uuid()) @db.Uuid
+  categoryId  String   @unique @map("category_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?
+  language    String   @default("vi")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("category_translations")
+}
+
+model POITranslation {
+  id          String   @id @default(uuid()) @db.Uuid
+  poiId       String   @unique @map("poi_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  description String?
+  specialties String?
+  priceRange  String?  @map("price_range") @db.VarChar(100)
+  audioUrl    String?  @map("audio_url") @db.VarChar(255)
+  audioPublicId String? @map("audio_public_id") @db.VarChar(255)
+  imageUrl    String?  @map("image_url") @db.VarChar(255)
+  imagePublicId String? @map("image_public_id") @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  poi         POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
+
+  @@map("poi_translations")
+}
+
+model MenuItem {
+  id          String    @id @default(uuid()) @db.Uuid
+  poiId       String    @map("poi_id") @db.Uuid
+  name        String    @db.VarChar(255)
+  price       Decimal?  @db.Decimal(12, 2)
+  description String?
+  imageUrl    String?   @map("image_url") @db.VarChar(255)
+  isAvailable Boolean   @default(true) @map("is_available")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  poi         POI       @relation(fields: [poiId], references: [id], onDelete: Cascade)
+
+  @@map("menu_items")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  adminId   String   @map("admin_id") @db.Uuid
+  action    String   @db.VarChar(255)
+  targetId  String?  @map("target_id") @db.Uuid
+  details   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  ipAddress String?  @map("ip_address")
+  newValue  String?  @map("new_value")
+  oldValue  String?  @map("old_value")
+  userAgent String?  @map("user_agent")
+  admin     User     @relation("AdminAuditLogs", fields: [adminId], references: [id])
+
+  @@map("audit_logs")
+}
+
 enum Role {
   ADMIN
   OWNER
@@ -17,129 +137,4 @@ enum POIStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  email         String    @unique
-  passwordHash  String    @map("password_hash")
-  fullName      String?   @map("full_name")
-  role          Role      @default(USER)
-  requestedRole Role?     @map("requested_role")
-  language      String    @default("vi")
-  isOnboarded   Boolean   @default(false) @map("is_onboarded")
-  isActive      Boolean   @default(true) @map("is_active")
-  deletedAt     DateTime? @map("deleted_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
-
-  pois          POI[]     @relation("OwnerPois")
-  auditLogs     AuditLog[] @relation("AdminAuditLogs")
-
-  @@map("users")
-}
-
-model POI {
-  id              String    @id @default(uuid()) @db.Uuid
-  lat             Float
-  lng             Float
-  rating          Decimal   @default(0.0) @db.Decimal(2, 1)
-  ownerId         String?   @map("owner_id") @db.Uuid
-  categoryId      String?   @map("category_id") @db.Uuid
-  status          POIStatus @default(APPROVED)
-  isActive        Boolean   @default(true) @map("is_active")
-  submittedAt     DateTime? @map("submitted_at")
-  approvedAt      DateTime? @map("approved_at")
-  rejectedAt      DateTime? @map("rejected_at")
-  rejectionReason String?   @map("rejection_reason") @db.Text
-  deletedAt       DateTime? @map("deleted_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
-
-  owner           User?            @relation("OwnerPois", fields: [ownerId], references: [id], onDelete: SetNull)
-  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  translations    POITranslation[]
-  menuItems       MenuItem[]
-
-  @@index([lat, lng])
-  @@index([categoryId])
-  @@map("pois")
-}
-
-model Category {
-  id            String                @id @default(uuid()) @db.Uuid
-  isActive      Boolean               @default(true) @map("is_active")
-  deletedAt     DateTime?             @map("deleted_at")
-  createdAt     DateTime              @default(now()) @map("created_at")
-  updatedAt     DateTime              @default(now()) @updatedAt @map("updated_at")
-
-  translations  CategoryTranslation[]
-  pois         POI[]
-
-  @@map("categories")
-}
-
-model CategoryTranslation {
-  id           String   @id @default(uuid()) @db.Uuid
-  categoryId   String   @unique @map("category_id") @db.Uuid
-  name         String   @db.VarChar(255)
-  description  String?  @db.Text
-  language     String   @default("vi")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
-
-  category     Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@map("category_translations")
-}
-
-model POITranslation {
-  id           String   @id @default(uuid()) @db.Uuid
-  poiId        String   @unique @map("poi_id") @db.Uuid
-  name         String   @db.VarChar(255)
-  description  String?  @db.Text
-  specialties  String?  @db.Text
-  priceRange   String?  @map("price_range") @db.VarChar(100)
-  audioUrl     String?  @map("audio_url") @db.VarChar(255)
-  imageUrl     String?  @map("image_url") @db.VarChar(255)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
-
-  poi          POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
-
-  @@map("poi_translations")
-}
-
-model MenuItem {
-  id          String   @id @default(uuid()) @db.Uuid
-  poiId       String   @map("poi_id") @db.Uuid
-  name        String   @db.VarChar(255)
-  price       Decimal? @db.Decimal(12, 2)
-  description String?  @db.Text
-  imageUrl    String?  @map("image_url") @db.VarChar(255)
-  isAvailable Boolean  @default(true) @map("is_available")
-  deletedAt   DateTime? @map("deleted_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
-
-  poi         POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
-
-  @@map("menu_items")
-}
-
-model AuditLog {
-  id          String   @id @default(uuid()) @db.Uuid
-  adminId     String   @map("admin_id") @db.Uuid
-  action      String   @db.VarChar(255)
-  targetId    String?  @map("target_id") @db.Uuid
-  details     String?  @db.Text
-  oldValue    String?  @map("old_value") @db.Text
-  newValue    String?  @map("new_value") @db.Text
-  ipAddress   String?  @map("ip_address")
-  userAgent   String?  @map("user_agent")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  admin       User     @relation("AdminAuditLogs", fields: [adminId], references: [id])
-
-  @@map("audit_logs")
 }

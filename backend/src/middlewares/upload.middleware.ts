@@ -1,35 +1,31 @@
-import fs from 'fs';
-import path from 'path';
-import { randomUUID } from 'crypto';
 import multer from 'multer';
-import { AppError } from './error.middleware';
 
-const poiImageDir = path.resolve(__dirname, '..', '..', 'img_modules', 'poi');
-fs.mkdirSync(poiImageDir, { recursive: true });
+const storage = multer.memoryStorage();
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, callback) => {
-    callback(null, poiImageDir);
-  },
-  filename: (_req, file, callback) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    callback(null, `${Date.now()}-${randomUUID()}${ext}`);
-  },
-});
+const allowedMimeTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/jpg',
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/mp4',
+  'audio/aac',
+  'audio/x-m4a',
+]);
 
-const fileFilter: multer.Options['fileFilter'] = (_req, file, callback) => {
-  if (!file.mimetype.startsWith('image/')) {
-    callback(new AppError(400, 'Only image files are allowed'));
-    return;
-  }
-
-  callback(null, true);
-};
-
-export const poiImageUpload = multer({
+export const poiMediaUpload = multer({
   storage,
-  fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 15 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, cb) => {
+    if (!allowedMimeTypes.has(file.mimetype)) {
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
+      return;
+    }
+    cb(null, true);
   },
 });

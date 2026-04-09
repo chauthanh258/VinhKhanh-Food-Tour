@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as poiController from '../controllers/poi.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
-import { poiImageUpload } from '../middlewares/upload.middleware';
+import { poiMediaUpload } from '../middlewares/upload.middleware';
 
 const router = Router();
 
@@ -132,7 +132,7 @@ router.get('/owner/list', authenticate, authorize(['OWNER', 'ADMIN']), poiContro
  *       201:
  *         description: Image uploaded successfully
  */
-router.post('/upload-image', authenticate, authorize(['OWNER', 'ADMIN']), poiImageUpload.single('image'), poiController.uploadPOIImage);
+router.post('/upload-image', authenticate, authorize(['OWNER', 'ADMIN']), poiMediaUpload.single('image'), poiController.uploadPOIImage);
 
 /**
  * @swagger
@@ -224,6 +224,17 @@ router.post('/', authenticate, authorize(['OWNER', 'ADMIN']), poiController.crea
  *         description: POI updated
  */
 router.put('/:id', authenticate, authorize(['OWNER', 'ADMIN']), poiController.updatePOI);
+
+router.post(
+	'/:id/media',
+	authenticate,
+	authorize(['OWNER', 'ADMIN']),
+	poiMediaUpload.fields([
+		{ name: 'image', maxCount: 1 },
+		{ name: 'audio', maxCount: 1 }
+	]),
+	poiController.uploadPOIMedia
+);
 
 /**
  * @swagger

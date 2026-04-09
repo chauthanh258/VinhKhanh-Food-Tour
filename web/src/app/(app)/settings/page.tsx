@@ -126,8 +126,6 @@ import { ChevronLeft, Globe, Volume2, Moon, MapPin, HelpCircle, Info, Shield, Ch
 import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { authApi } from "@/lib/api";
-import { toast } from "react-hot-toast";
 
 const languages = [
   { id: "en", name: "English", flag: "🇬🇧", label: "English" },

@@ -8,6 +8,7 @@ interface UserState {
   total: number;
   fetchUsers: (filter?: { skip?: number; take?: number }) => Promise<void>;
   updateUserRole: (userId: string, role: string) => Promise<void>;
+  updateUser: (id: string, data: Partial<User>) => Promise<void>;
   updateUserStatus: (id: string, isActive: boolean) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
 }
