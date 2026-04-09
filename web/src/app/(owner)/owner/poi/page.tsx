@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import {
   Plus,
@@ -22,6 +22,27 @@ import { Modal } from "../../components/Modal";
 import { api } from "@/lib/api";
 import "leaflet/dist/leaflet.css";
 
+const ASSET_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(
+  /\/api\/?$/,
+  ""
+);
+
+function normalizePoiImageUrl(url?: string) {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+
+  // Fix common misconfiguration where URLs are saved as .../api/img_modules/...
+  const withoutApi = trimmed.replace("/api/img_modules/", "/img_modules/");
+
+  // If the URL is relative to backend static, make it absolute so Next.js can load it.
+  if (withoutApi.startsWith("/img_modules/")) {
+    return `${ASSET_BASE_URL}${withoutApi}`;
+  }
+
+  return withoutApi;
+}
+
 const MapContainer = dynamic(
   () => import("react-leaflet").then((mod) => mod.MapContainer),
   { ssr: false }
@@ -34,12 +55,14 @@ const CircleMarker = dynamic(
   () => import("react-leaflet").then((mod) => mod.CircleMarker),
   { ssr: false }
 );
+const PoiMiniMapSync = dynamic(() => import("./PoiMiniMapSync"), { ssr: false });
 
 interface POIItem {
   id: string;
   name: string;
   address?: string;
   specialties?: string;
+  priceRange?: string;
   lat: number;
   lng: number;
   rating: number;
@@ -48,6 +71,7 @@ interface POIItem {
     name: string;
     description?: string;
     specialties?: string;
+    priceRange?: string;
     imageUrl?: string;
   }>;
 }
@@ -69,30 +93,29 @@ export default function POIManagement() {
     name: "",
     address: "",
     specialties: "",
+    priceRange: "",
     description: "",
+    imageUrl: "",
     lat: 0,
     lng: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedPosition: [number, number] =
     formData.lat !== 0 || formData.lng !== 0
       ? [formData.lat, formData.lng]
       : defaultMapCenter;
 
   useEffect(() => {
-    if (!mapInstance || modalMode === "view") return;
-
-    const handleMapClick = (event: any) => {
-      const { lat, lng } = event.latlng;
-      setFormData((prev) => ({ ...prev, lat, lng }));
-    };
-
-    mapInstance.on("click", handleMapClick);
     return () => {
-      mapInstance.off("click", handleMapClick);
+      if (imagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(imagePreview);
+      }
     };
-  }, [mapInstance, modalMode]);
+  }, [imagePreview]);
 
   // Fetch POIs
   const fetchPOIs = useCallback(async () => {
@@ -108,7 +131,17 @@ export default function POIManagement() {
             name: poi.translations?.[0]?.name || "Unnamed POI",
             address: poi.translations?.[0]?.description || "",
             specialties: poi.translations?.[0]?.specialties || "",
+            priceRange: poi.translations?.[0]?.priceRange || "",
             description: poi.translations?.[0]?.description || "",
+            translations: poi.translations?.length
+              ? [
+                  {
+                    ...poi.translations[0],
+                    imageUrl: normalizePoiImageUrl(poi.translations[0]?.imageUrl),
+                  },
+                  ...poi.translations.slice(1),
+                ]
+              : poi.translations,
           }))
         );
         setPagination({
@@ -132,17 +165,44 @@ export default function POIManagement() {
     setModalMode(mode);
     if (poi) {
       setSelectedPoi(poi);
+      const normalizedImageUrl = normalizePoiImageUrl(poi.translations?.[0]?.imageUrl);
       setFormData({
         name: poi.name,
         address: poi.address || "",
         specialties: poi.translations?.[0]?.specialties || "",
+        priceRange: poi.translations?.[0]?.priceRange || "",
         description: poi.translations?.[0]?.description || "",
+        imageUrl: normalizedImageUrl,
         lat: poi.lat,
         lng: poi.lng,
       });
+      setImagePreview(normalizedImageUrl);
+      setImageFile(null);
     } else {
       setSelectedPoi(null);
-      setFormData({ name: "", address: "", specialties: "", description: "", lat: 0, lng: 0 });
+      setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: defaultMapCenter[0], lng: defaultMapCenter[1] });
+      setImagePreview("");
+      setImageFile(null);
+
+      if (mode === "add" && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setFormData((prev) => ({
+              ...prev,
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            }));
+          },
+          () => {
+            setFormData((prev) => ({
+              ...prev,
+              lat: defaultMapCenter[0],
+              lng: defaultMapCenter[1],
+            }));
+          },
+          { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
+        );
+      }
     }
     setIsModalOpen(true);
   };
@@ -150,7 +210,26 @@ export default function POIManagement() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedPoi(null);
-    setFormData({ name: "", address: "", specialties: "", description: "", lat: 0, lng: 0 });
+    setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
+    setImagePreview("");
+    setImageFile(null);
+  };
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setImagePreview("");
+    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSave = async () => {
@@ -161,6 +240,15 @@ export default function POIManagement() {
 
     try {
       setIsSubmitting(true);
+      let imageUrl = formData.imageUrl.trim() || undefined;
+
+      if (imageFile) {
+        const imageFormData = new FormData();
+        imageFormData.append("image", imageFile);
+        const uploadResponse = await api.upload("/pois/upload-image", imageFormData);
+        imageUrl = uploadResponse.data.imageUrl;
+      }
+
       const payload = {
         lat: Number(formData.lat),
         lng: Number(formData.lng),
@@ -169,6 +257,8 @@ export default function POIManagement() {
             name: formData.name,
             description: formData.description,
             specialties: formData.specialties,
+            priceRange: formData.priceRange.trim() || undefined,
+            imageUrl,
             language: "vi",
           },
         ],
@@ -568,16 +658,65 @@ export default function POIManagement() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  Price Range
+                </label>
+                <input
+                  type="text"
+                  value={formData.priceRange}
+                  onChange={(e) => setFormData({ ...formData, priceRange: e.target.value })}
+                  disabled={modalMode === "view"}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-orange-500/20 outline-none disabled:opacity-60"
+                  placeholder="Ví dụ: 30.000đ - 120.000đ"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  POI Image
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    disabled={modalMode === "view"}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={modalMode === "view"}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-60"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Choose image
+                  </button>
+                  {(imagePreview || formData.imageUrl) && modalMode !== "view" && (
+                    <button
+                      type="button"
+                      onClick={clearImage}
+                      className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Chọn ảnh từ thiết bị, file sẽ được lưu vào img_modules.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
                 Location (click on map to choose)
               </label>
               <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
                 <MapContainer
-                  ref={(map) => {
-                    if (map) setMapInstance(map);
-                  }}
-                  key={`${modalMode}-${selectedPosition[0]}-${selectedPosition[1]}`}
+                  key={modalMode}
                   center={selectedPosition}
                   zoom={15}
                   style={{ height: 260, width: "100%" }}
@@ -586,6 +725,11 @@ export default function POIManagement() {
                   <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <PoiMiniMapSync
+                    center={selectedPosition}
+                    editable={modalMode !== "view"}
+                    onPick={(lat, lng) => setFormData((prev) => ({ ...prev, lat, lng }))}
                   />
                   <CircleMarker
                     center={selectedPosition}
@@ -641,6 +785,26 @@ export default function POIManagement() {
                 className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-orange-500/20 outline-none disabled:opacity-60 resize-none"
                 placeholder="Tell us about your restaurant..."
               />
+            </div>
+
+            <div className="space-y-4">
+              <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                Image Preview
+              </label>
+              <div className="w-full max-w-md aspect-video rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+                {(imagePreview || formData.imageUrl) ? (
+                  <img
+                    src={imagePreview || formData.imageUrl}
+                    alt="POI preview"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <Upload className="w-8 h-8" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

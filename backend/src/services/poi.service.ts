@@ -1,5 +1,6 @@
 import * as poiRepo from '../repositories/poi.repo';
 import * as translationRepo from '../repositories/translation.repo';
+import * as auditService from './audit.service';
 import { AppError } from '../middlewares/error.middleware';
 import { dbLangToGoogleTts, normalizeUiLangToDbLang } from '../utils/language.util';
 import { synthesizeTextToMp3Buffer } from './tts.service';
@@ -11,12 +12,16 @@ type CachedTranslationTts = { text: string; audioBase64: string; expiresAt: numb
 const translationCache = new Map<string, CachedTranslationTts>();
 
 export const createNewPOI = async (ownerId: string, data: any) => {
-  const { lat, lng, translations } = data;
+  const { lat, lng, categoryId, translations } = data;
   
   const poi = await poiRepo.createPOI({
     lat,
     lng,
-    owner: { connect: { id: ownerId } }
+    category: categoryId ? { connect: { id: categoryId } } : undefined,
+    owner: { connect: { id: ownerId } },
+    status: 'PENDING',
+    isActive: false,
+    submittedAt: new Date(),
   });
 
   if (translations && Array.isArray(translations) && translations.length > 0) {
@@ -69,20 +74,39 @@ export const deletePOI = async (poiId: string, userId: string, userRole: string)
     throw new AppError(403, 'You do not have permission to delete this POI');
   }
 
+  // Only admin can actually delete POI. Owner can only request deletion
+  if (userRole !== 'ADMIN') {
+    throw new AppError(403, 'Owner cannot directly delete POI. Please contact admin for deletion requests.');
+  }
+
   return poiRepo.deletePOI(poiId);
 };
 
-export const listOwnerPOIs = async (
-  ownerId: string,
-  filters: {
-    search?: string;
-    status?: 'all' | 'active' | 'hidden';
-    page?: number;
-    limit?: number;
-  } = {}
-) => {
-  const result = await poiRepo.findPOIsByOwnerWithFilters(ownerId, filters);
-  return result;
+export const requestDeletePOI = async (poiId: string, userId: string, userRole: string) => {
+  const poi = await poiRepo.findPOIById(poiId);
+  if (!poi) throw new AppError(404, 'POI not found');
+
+  if (userRole !== 'ADMIN' && poi.ownerId !== userId) {
+    throw new AppError(403, 'You do not have permission to delete this POI');
+  }
+
+  // Owner can request deletion, admin can directly delete
+  if (userRole === 'ADMIN') {
+    throw new AppError(400, 'Admin should use direct delete instead of request');
+  }
+
+  // Log the deletion request in audit logs
+  const poiTranslation = await translationRepo.findTranslationByPOIId(poiId);
+  const poiName = poiTranslation?.name || 'POI';
+
+  // For now, we'll use audit logs to track deletion requests
+  // In future, this could be moved to a dedicated requests table
+  await auditService.logAdminAction(userId, 'REQUEST_DELETE_POI', poiId, {
+    name: poiName,
+    reason: 'Owner requested deletion'
+  });
+
+  return poi;
 };
 
 export const listNearbyPOIs = async (lat: number, lng: number, radius: number, _lang: string) => {

@@ -21,3 +21,13 @@ export const updateRole = async (req: AuthenticatedRequest, res: Response, next:
     next(error);
   }
 };
+
+export const requestOwnerUpgrade = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.userId;
+    const user = await userService.requestOwnerUpgrade(userId);
+    sendResponse(res, 200, user, 'Owner upgrade request submitted successfully');
+  } catch (error) {
+    next(error);
+  }
+};

@@ -44,6 +44,17 @@ export const useUserAdminStore = create<UserState>((set, get) => ({
     }
   },
 
+  updateUser: async (id, data) => {
+    set({ loading: true, error: null });
+    try {
+      await userApi.update(id, data);
+      await get().fetchUsers();
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to update user', loading: false });
+      throw error;
+    }
+  },
+
   updateUserStatus: async (id, isActive) => {
     set({ loading: true, error: null });
     try {

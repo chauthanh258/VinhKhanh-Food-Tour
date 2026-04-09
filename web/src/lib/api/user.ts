@@ -36,6 +36,11 @@ export const userApi = {
     return response.data;
   },
 
+  update: async (id: string, data: { fullName?: string; email?: string; role?: string; isActive?: boolean }) => {
+    const response = await api.put(`/admin/users/${id}`, data);
+    return response.data;
+  },
+
   updateStatus: async (id: string, isActive: boolean) => {
     const response = await api.patch(`/admin/users/${id}/status`, { isActive });
     return response.data;

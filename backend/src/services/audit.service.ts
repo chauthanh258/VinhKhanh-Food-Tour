@@ -4,7 +4,11 @@ export const logAdminAction = async (
   adminId: string,
   action: string,
   targetId?: string,
-  details?: any
+  details?: any,
+  oldValue?: any,
+  newValue?: any,
+  ipAddress?: string,
+  userAgent?: string
 ) => {
   try {
     console.log(`[AUDIT] Creating log - Action: ${action}, AdminId: ${adminId}, TargetId: ${targetId}`);
@@ -15,6 +19,10 @@ export const logAdminAction = async (
         action,
         targetId,
         details: details ? JSON.stringify(details) : undefined,
+        oldValue: oldValue ? JSON.stringify(oldValue) : undefined,
+        newValue: newValue ? JSON.stringify(newValue) : undefined,
+        ipAddress,
+        userAgent,
       },
     });
     

@@ -7,6 +7,7 @@ import swaggerJsdoc from 'swagger-jsdoc';
 import routes from './routes/index';
 import { errorHandler } from './middlewares/error.middleware';
 import { env } from './config/env';
+import path from 'path';
 
 const app = express();
 const PORT = env.PORT;
@@ -16,6 +17,14 @@ app.use(helmet());
 app.use(cors({ origin: env.FRONTEND_URL }));
 app.use(morgan('dev'));
 app.use(express.json());
+app.use(
+  '/img_modules',
+  (_req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static(path.resolve(__dirname, '..', 'img_modules'))
+);
 
 // Swagger Setup
 const swaggerOptions = {
