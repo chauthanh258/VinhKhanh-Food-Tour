@@ -64,6 +64,23 @@ export const updatePOI = async (req: AuthenticatedRequest, res: Response, next: 
   }
 };
 
+export const uploadPOIMedia = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+    const userRole = req.user!.role;
+    const files = req.files as {
+      image?: Express.Multer.File[];
+      audio?: Express.Multer.File[];
+    } | undefined;
+
+    const media = await poiService.uploadPOIMedia(id, userId, userRole, files || {});
+    sendResponse(res, 200, media, 'POI media uploaded successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const deletePOI = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;

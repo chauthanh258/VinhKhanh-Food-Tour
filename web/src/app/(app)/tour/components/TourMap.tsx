@@ -62,8 +62,8 @@ interface POI {
     description: string;
     specialties: string;
     priceRange: string;
-    audioUrl: string;
-    imageUrl: string;
+    audioUrl?: string;
+    imageUrl?: string;
   };
 }
 

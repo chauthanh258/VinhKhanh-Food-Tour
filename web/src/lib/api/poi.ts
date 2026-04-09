@@ -6,6 +6,9 @@ export interface POITranslation {
   description?: string;
   specialties?: string;
   priceRange?: string;
+  language: string;
+  audioUrl?: string;
+  imageUrl?: string;
 }
 
 export interface POIOwner {
@@ -63,6 +66,9 @@ export const poiApi = {
       description?: string;
       specialties?: string;
       priceRange?: string;
+      language: string;
+      audioUrl?: string;
+      imageUrl?: string;
     }>;
   }) => {
     const response = await api.post('/admin/pois', data);
@@ -83,6 +89,8 @@ export const poiApi = {
         specialties?: string;
         priceRange?: string;
         language: string;
+        audioUrl?: string;
+        imageUrl?: string;
       }>;
     }
   ) => {
@@ -101,7 +109,7 @@ export const poiApi = {
   },
 
   requestDelete: async (id: string) => {
-    const response = await api.post(`/pois/${id}/request-delete`);
+    const response = await api.post(`/pois/${id}/request-delete`, {});
     return response.data;
   },
 

@@ -73,6 +73,7 @@ interface POIItem {
     specialties?: string;
     priceRange?: string;
     imageUrl?: string;
+    audioUrl?: string;
   }>;
 }
 
@@ -99,10 +100,11 @@ export default function POIManagement() {
     lat: 0,
     lng: 0,
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedPosition: [number, number] =
     formData.lat !== 0 || formData.lng !== 0
@@ -111,11 +113,40 @@ export default function POIManagement() {
 
   useEffect(() => {
     return () => {
-      if (imagePreview.startsWith("blob:")) {
+      if (imagePreview?.startsWith("blob:")) {
         URL.revokeObjectURL(imagePreview);
       }
     };
   }, [imagePreview]);
+
+  useEffect(() => {
+    if (!imageFile) {
+      if (!selectedPoi?.translations?.[0]?.imageUrl) {
+        setImagePreview(null);
+      }
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreview(previewUrl);
+
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+    };
+  }, [imageFile, selectedPoi]);
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] || null;
+    setImageFile(nextFile);
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setFormData((prev) => ({ ...prev, imageUrl: '' }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   // Fetch POIs
   const fetchPOIs = useCallback(async () => {
@@ -176,33 +207,15 @@ export default function POIManagement() {
         lat: poi.lat,
         lng: poi.lng,
       });
-      setImagePreview(normalizedImageUrl);
       setImageFile(null);
+      setAudioFile(null);
+      setImagePreview(poi.translations?.[0]?.imageUrl || null);
     } else {
       setSelectedPoi(null);
-      setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: defaultMapCenter[0], lng: defaultMapCenter[1] });
-      setImagePreview("");
+      setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
       setImageFile(null);
-
-      if (mode === "add" && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setFormData((prev) => ({
-              ...prev,
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            }));
-          },
-          () => {
-            setFormData((prev) => ({
-              ...prev,
-              lat: defaultMapCenter[0],
-              lng: defaultMapCenter[1],
-            }));
-          },
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
-        );
-      }
+      setAudioFile(null);
+      setImagePreview(null);
     }
     setIsModalOpen(true);
   };
@@ -211,25 +224,9 @@ export default function POIManagement() {
     setIsModalOpen(false);
     setSelectedPoi(null);
     setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
-    setImagePreview("");
     setImageFile(null);
-  };
-
-  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
-
-  const clearImage = () => {
-    setImageFile(null);
-    setImagePreview("");
-    setFormData((prev) => ({ ...prev, imageUrl: "" }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    setAudioFile(null);
+    setImagePreview(null);
   };
 
   const handleSave = async () => {
@@ -240,14 +237,7 @@ export default function POIManagement() {
 
     try {
       setIsSubmitting(true);
-      let imageUrl = formData.imageUrl.trim() || undefined;
-
-      if (imageFile) {
-        const imageFormData = new FormData();
-        imageFormData.append("image", imageFile);
-        const uploadResponse = await api.upload("/pois/upload-image", imageFormData);
-        imageUrl = uploadResponse.data.imageUrl;
-      }
+      const imageUrl = formData.imageUrl.trim() || undefined;
 
       const payload = {
         lat: Number(formData.lat),
@@ -265,9 +255,22 @@ export default function POIManagement() {
       };
 
       if (modalMode === "add") {
-        await api.post("/pois", payload);
+        const createResponse = await api.post("/pois", payload);
+        const createdPoiId = createResponse?.data?.id;
+        if (createdPoiId && (imageFile || audioFile)) {
+          const mediaFormData = new FormData();
+          if (imageFile) mediaFormData.append("image", imageFile);
+          if (audioFile) mediaFormData.append("audio", audioFile);
+          await api.post(`/pois/${createdPoiId}/media`, mediaFormData);
+        }
       } else if (modalMode === "edit" && selectedPoi) {
         await api.put(`/pois/${selectedPoi.id}`, payload);
+        if (imageFile || audioFile) {
+          const mediaFormData = new FormData();
+          if (imageFile) mediaFormData.append("image", imageFile);
+          if (audioFile) mediaFormData.append("audio", audioFile);
+          await api.post(`/pois/${selectedPoi.id}/media`, mediaFormData);
+        }
       }
 
       handleCloseModal();
@@ -787,23 +790,56 @@ export default function POIManagement() {
               />
             </div>
 
-            <div className="space-y-4">
-              <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                Image Preview
-              </label>
-              <div className="w-full max-w-md aspect-video rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-                {(imagePreview || formData.imageUrl) ? (
-                  <img
-                    src={imagePreview || formData.imageUrl}
-                    alt="POI preview"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    <Upload className="w-8 h-8" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  POI Image
+                </label>
+                <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-800/40 space-y-3">
+                  <div className="h-40 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="POI preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm text-gray-400">No image selected</span>
+                    )}
                   </div>
-                )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={modalMode === "view"}
+                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-xl file:border-0 file:bg-orange-500 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-orange-600 disabled:opacity-60"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                  Narration Audio
+                </label>
+                <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-800/40 space-y-3">
+                  <div className="h-40 rounded-xl bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-center px-4">
+                    <div>
+                      <p className="font-semibold text-gray-700 dark:text-gray-200">
+                        {audioFile ? audioFile.name : selectedPoi?.translations?.[0]?.audioUrl ? "Uploaded audio available" : "No audio selected"}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Upload an MP3, WAV, or M4A narration file.
+                      </p>
+                    </div>
+                  </div>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    disabled={modalMode === "view"}
+                    onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-xl file:border-0 file:bg-orange-500 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-orange-600 disabled:opacity-60"
+                  />
+                </div>
               </div>
             </div>
           </div>

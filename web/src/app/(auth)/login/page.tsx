@@ -82,7 +82,6 @@ export default function LoginPage() {
         );
         // router.push("/");
         console.log("Google login success");
-        console.log(tokenResponse);
       } catch (error) {
         console.error("Google login failed:", error);
       } finally {
