@@ -122,7 +122,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronLeft, Globe, Volume2, Moon, MapPin, HelpCircle, Info, Shield, Check, X, UserIcon, LogOut } from "lucide-react";
+import { ChevronLeft, Globe, Volume2, Moon, MapPin, HelpCircle, Info, Shield, Check, X, UserIcon, LogOut, Store } from "lucide-react";
 import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -364,6 +364,29 @@ export default function SettingsPage() {
                 <p className="font-medium">Terms of Service</p>
               </div>
               <span className="text-zinc-500">›</span>
+            </button>
+          </div>
+        </div>
+
+        {/* PARTNERSHIP Section */}
+        <div>
+          <h3 className="text-zinc-500 text-xs font-semibold uppercase tracking-widest px-2 mb-4">PARTNERSHIP</h3>
+          
+          <div className="space-y-3">
+            <button 
+              onClick={() => router.push("/shop/register")}
+              className="w-full bg-zinc-900 border border-zinc-800 hover:border-orange-500/50 rounded-3xl p-5 flex items-center justify-between transition-all group active:scale-[0.985]"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-2xl bg-orange-500/10 flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
+                  <Store className="w-5 h-5 text-orange-400" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-white">Trở thành chủ quán</p>
+                  <p className="text-sm text-zinc-400">Gia nhập cộng đồng bán hàng</p>
+                </div>
+              </div>
+              <div className="text-orange-400 text-xl group-hover:translate-x-1 transition-transform">›</div>
             </button>
           </div>
         </div>
