@@ -55,10 +55,9 @@ export default function PlaceList({ pois, onSelectPoi, onTriggerAudio }: PlaceLi
             >
               {/* Top Image Section */}
               <div className="relative w-full h-48 bg-zinc-800 overflow-hidden">
-                <Image 
+                <img 
                   src={poi.translation.imageUrl || "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=600&auto=format&fit=crop"} 
                   alt={poi.translation.name}
-                  fill
                   className="object-cover group-hover:scale-110 transition-transform duration-700"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
