@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as authController from '../controllers/auth.controller';
+import * as userController from '../controllers/user.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -186,10 +187,30 @@ router.post('/google', authController.googleLogin);
  *               fullName: { type: string }
  *               language: { type: string }
  *               isOnboarded: { type: boolean }
+ *               currentPassword: { type: string }
+ *               newPassword: { type: string }
  *     responses:
  *       200:
  *         description: Profile updated successfully
  */
 router.patch('/profile', authenticate, authController.updateProfile);
+
+/**
+ * @swagger
+ * /auth/request-owner-upgrade:
+ *   post:
+ *     summary: Request to upgrade user role to owner
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Owner upgrade request submitted successfully
+ *       400:
+ *         description: Invalid request (already requested or not a user)
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/request-owner-upgrade', authenticate, userController.requestOwnerUpgrade);
 
 export default router;

@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  turbopack: {
+    root: __dirname,  // Points to the 'web/' directory
+  },
 };
 
 export default nextConfig;

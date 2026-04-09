@@ -126,6 +126,8 @@ import { ChevronLeft, Globe, Volume2, Moon, MapPin, HelpCircle, Info, Shield, Ch
 import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import { authApi } from "@/lib/api";
+import { toast } from "react-hot-toast";
 
 const languages = [
   { id: "en", name: "English", flag: "🇬🇧", label: "English" },
@@ -188,6 +190,49 @@ export default function SettingsPage() {
     logout();
     router.push("/login");
   };
+
+  // const handleUpdateProfile = async () => {
+  //   if (!user) return;
+
+  //   setIsUpdating(true);
+  //   try {
+  //     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/profile`, {
+  //       method: 'PATCH',
+  //       headers: { 
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${Cookies.get('auth-token')}`
+  //       },
+  //       body: JSON.stringify(profileForm),
+  //     });
+  //     const result = await response.json();
+      
+  //     if (result.success) {
+  //       updateUser(profileForm);
+  //       setIsEditingProfile(false);
+  //     } else {
+  //       console.error("Failed to update profile on backend");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error updating profile:", error);
+  //   } finally {
+  //     setIsUpdating(false);
+  //   }
+  // };
+
+  // const handleRequestOwnerUpgrade = async () => {
+  //   if (!user || user.role !== 'USER') return;
+
+  //   setIsRequestingUpgrade(true);
+  //   try {
+  //     await authApi.requestOwnerUpgrade();
+  //     toast.success('Yêu cầu nâng cấp lên Owner đã được gửi. Admin sẽ xem xét trong thời gian sớm nhất.');
+  //   } catch (error: any) {
+  //     console.error('Failed to request owner upgrade:', error);
+  //     toast.error(error?.response?.data?.message || 'Không thể gửi yêu cầu nâng cấp');
+  //   } finally {
+  //     setIsRequestingUpgrade(false);
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
