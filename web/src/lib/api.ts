@@ -4,9 +4,10 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 async function fetcher(endpoint: string, options: RequestInit = {}) {
   const token = Cookies.get('auth-token');
-
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers,
   };
@@ -37,4 +38,5 @@ export const api = {
   put: (endpoint: string, body: any) => fetcher(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
   patch: (endpoint: string, body: any) => fetcher(endpoint, { method: 'PATCH', body: JSON.stringify(body) }),
   delete: (endpoint: string) => fetcher(endpoint, { method: 'DELETE' }),
+  upload: (endpoint: string, body: FormData) => fetcher(endpoint, { method: 'POST', body }),
 };

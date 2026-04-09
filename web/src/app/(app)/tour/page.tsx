@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Navigation, MousePointer2 } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 import PlaceList from '@/app/(app)/tour/components/PlaceList';
 import { useUserStore } from '@/store/userStore';
-import { PoiAudioDrawer, ReopenButton, type POI } from '@/app/(app)/tour/components/PoiAudioDrawer';
+import { PoiAudioDrawer, type POI } from '@/app/(app)/tour/components/PoiAudioDrawer';
 
 const API_BASE = 'http://localhost:3001';
 
