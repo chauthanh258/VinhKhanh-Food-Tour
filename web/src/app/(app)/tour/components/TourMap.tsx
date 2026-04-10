@@ -81,7 +81,7 @@ export default function TourMap({ userPos, pois, onTriggerAudio, onMapClick }: T
     if (userPos && pois.length > 0) {
       pois.forEach((poi) => {
         // Simple geofencing: if within 25 meters and not visited in this session
-        if (poi.distance <= 25 && !visitedPois.current.has(poi.id)) {
+        if (poi.distance <= 50 && !visitedPois.current.has(poi.id)) {
           visitedPois.current.add(poi.id);
           onTriggerAudio(poi);
         }
@@ -112,7 +112,7 @@ export default function TourMap({ userPos, pois, onTriggerAudio, onMapClick }: T
             </Marker>
             <Circle 
                 center={userPos} 
-                radius={25} 
+                radius={50} 
                 pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1 }} 
             />
             <MapTracker pos={userPos} />

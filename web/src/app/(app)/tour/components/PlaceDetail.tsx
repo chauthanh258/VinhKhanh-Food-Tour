@@ -1,7 +1,7 @@
 'use client';
 
-import { X, MapPin, Star, Volume2, UtensilsCrossed, Tag, Info, ArrowLeft } from 'lucide-react';
-import Image from 'next/image';
+import { X, MapPin, Star, Volume2, UtensilsCrossed, Tag, Info } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 
 interface POI {
   id: string;
@@ -27,6 +27,7 @@ interface PlaceDetailProps {
 }
 
 export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: PlaceDetailProps) {
+  const t = useTranslation();
   if (!poi) return null;
 
   return (
@@ -41,7 +42,7 @@ export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: 
       <div className="relative w-full max-w-lg bg-zinc-950 border-t sm:border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-500 max-h-[90vh] flex flex-col">
         
         {/* Header/Image Section */}
-        <div className="relative h-64 w-full flex-shrink-0 bg-zinc-900">
+        <div className="relative h-64 w-full flex-shrink-0 bg-zinc-900 overflow-hidden">
            <img 
              src={poi.translation.imageUrl || "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=600&auto=format&fit=crop"} 
              alt={poi.translation.name}
@@ -61,7 +62,7 @@ export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: 
            <div className="space-y-2">
              <div className="flex items-center gap-2">
                <span className="bg-orange-500/10 text-orange-500 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border border-orange-500/20">
-                 Quận 4 • Vĩnh Khánh
+                 {t.placeDetail.locationLabel}
                </span>
                <div className="flex items-center gap-1 text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/10">
                  <Star size={10} className="fill-yellow-500" />
@@ -73,7 +74,7 @@ export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: 
              </h2>
              <div className="flex items-center gap-2 text-zinc-500 text-sm">
                 <MapPin size={14} className="text-orange-500" />
-                <span>Cách bạn {poi.distance}m</span>
+                <span>{t.placeDetail.distanceAway(poi.distance)}</span>
              </div>
            </div>
 
@@ -81,7 +82,7 @@ export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: 
               <div className="flex items-start gap-3 text-zinc-300">
                  <UtensilsCrossed size={18} className="text-orange-500 mt-0.5 flex-shrink-0" />
                  <div>
-                    <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Món ăn đặc sắc</h4>
+                    <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">{t.placeDetail.specialties}</h4>
                     <p className="text-sm font-medium italic leading-relaxed">
                        {poi.translation.specialties}
                     </p>
@@ -91,7 +92,7 @@ export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: 
               <div className="flex items-center gap-3 text-zinc-300">
                  <Tag size={18} className="text-orange-500 flex-shrink-0" />
                  <div>
-                    <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-0.5">Giá ước tính</h4>
+                    <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-0.5">{t.placeDetail.estimatedPrice}</h4>
                     <p className="text-sm font-bold text-white">
                        {poi.translation.priceRange}
                     </p>
@@ -102,7 +103,7 @@ export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: 
            <div className="space-y-3">
               <div className="flex items-center gap-2 text-zinc-400">
                  <Info size={16} className="text-orange-500" />
-                 <h4 className="text-sm font-bold uppercase tracking-widest">Giới thiệu</h4>
+                 <h4 className="text-sm font-bold uppercase tracking-widest">{t.placeDetail.introduction}</h4>
               </div>
               <p className="text-zinc-400 text-sm leading-relaxed">
                  {poi.translation.description}
@@ -117,12 +118,12 @@ export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: 
              className="flex-1 flex items-center justify-center gap-2 h-14 rounded-2xl bg-white text-black font-bold hover:bg-zinc-200 transition-colors"
            >
              <Volume2 size={20} />
-             Nghe thuyết minh
+             {t.placeDetail.listenAudio}
            </button>
            <button 
              onClick={() => onViewOnMap(poi)}
              className="flex items-center justify-center w-14 h-14 rounded-2xl bg-zinc-800 border border-white/10 text-white hover:bg-zinc-700 transition-colors"
-             title="Xem trên bản đồ"
+             title={t.placeDetail.viewOnMap}
            >
              <MapPin size={20} />
            </button>
@@ -131,3 +132,4 @@ export default function PlaceDetail({ poi, onClose, onViewOnMap, onPlayAudio }: 
     </div>
   );
 }
+

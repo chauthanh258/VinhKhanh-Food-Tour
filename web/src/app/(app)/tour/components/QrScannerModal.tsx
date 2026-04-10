@@ -6,6 +6,7 @@ import { X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
+import { useTranslation } from '@/i18n';
 
 interface QrScannerModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
   const [mounted, setMounted] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const router = useRouter();
+  const t = useTranslation();
 
   useEffect(() => {
     setMounted(true);
@@ -73,7 +75,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         router.push(`/tour?poiId=${poiId}`);
       }, 1000);
     } else {
-      setError('Mã QR không hợp lệ cho ứng dụng này.');
+      setError(t.qrScanner.invalidQr);
     }
   }, [stopScanner, triggerSuccessEffect, onClose, router]);
 
@@ -101,7 +103,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
       } catch (err) {
         if (active) {
           console.error('Failed to start scanner:', err);
-          setError('Không thể truy cập camera. Vui lòng cấp quyền.');
+          setError(t.qrScanner.cameraError);
           setIsScanning(false);
         }
       }
@@ -132,7 +134,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         const result = await html5QrCode.scanFile(imageFile, true);
         await handleScanSuccess(result);
       } catch (err) {
-        setError('Không tìm thấy mã QR trong hình ảnh này.');
+        setError(t.qrScanner.noQrFound);
       }
     }
   };
@@ -145,8 +147,8 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         {/* Header */}
         <div className="p-6 flex items-center justify-between border-b border-white/5">
           <div>
-            <h2 className="text-xl font-bold text-white">Quét mã QR</h2>
-            <p className="text-sm text-zinc-500">Quét mã tại quán để nhận ưu đãi</p>
+            <h2 className="text-xl font-bold text-white">{t.qrScanner.title}</h2>
+            <p className="text-sm text-zinc-500">{t.qrScanner.subtitle}</p>
           </div>
           <button 
             onClick={onClose}
@@ -163,7 +165,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
           {!isScanning && !error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
-              <span className="text-zinc-500 font-medium">Đang khởi động camera...</span>
+              <span className="text-zinc-500 font-medium">{t.qrScanner.startingCamera}</span>
             </div>
           )}
 
@@ -177,7 +179,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
                 onClick={() => { setError(null); setIsScanning(true); }}
                 className="px-6 py-2 bg-orange-500 rounded-xl font-bold text-white text-sm"
               >
-                Thử lại
+                {t.qrScanner.retry}
               </button>
             </div>
           )}
@@ -187,12 +189,12 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
         <div className="p-8 flex flex-col gap-4">
           <label className="flex items-center justify-center gap-3 w-full h-14 bg-zinc-800 hover:bg-zinc-700 rounded-2xl font-bold text-white transition-all cursor-pointer active:scale-95">
             <ImageIcon className="w-5 h-5 text-zinc-400" />
-            <span>Chọn từ thư viện</span>
+            <span>{t.qrScanner.chooseFromGallery}</span>
             <input type="file" accept="image/*" className="hidden" onChange={onFileChange} />
           </label>
           
           <p className="text-center text-[10px] text-zinc-600 uppercase tracking-widest font-bold">
-            Hoặc đưa camera vào mã QR
+            {t.qrScanner.orPointCamera}
           </p>
         </div>
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Volume2, VolumeX, ChevronDown, MapPin, Star, DollarSign, Utensils, Play, Pause, SkipForward, ChevronUp, X } from 'lucide-react';
+import { useTranslation } from '@/i18n';
 
 export interface POI {
   id: string;
@@ -39,6 +40,7 @@ export function PoiAudioDrawer({ poi, isGuidanceActive, onToggleGuidance, onClos
   const [isPlaying, setIsPlaying] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const descRef = useRef<HTMLParagraphElement>(null);
+  const t = useTranslation();
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -168,7 +170,7 @@ export function PoiAudioDrawer({ poi, isGuidanceActive, onToggleGuidance, onClos
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-0.5">Đang thuyết minh</p>
+            <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mb-0.5">{t.audioDrawer.nowNarrating}</p>
             <h2 className="text-base font-bold text-white truncate leading-tight">{poi.translation.name}</h2>
           </div>
 
@@ -206,7 +208,7 @@ export function PoiAudioDrawer({ poi, isGuidanceActive, onToggleGuidance, onClos
               ) : (
                 <div className="w-full h-full flex items-center justify-center flex-col gap-2 text-zinc-600">
                   <MapPin className="w-10 h-10" />
-                  <span className="text-sm">Không có ảnh</span>
+                  <span className="text-sm">{t.audioDrawer.noImage}</span>
                 </div>
               )}
               <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
@@ -240,7 +242,7 @@ export function PoiAudioDrawer({ poi, isGuidanceActive, onToggleGuidance, onClos
               </div>
               <div className="relative">
                 <div className="overflow-y-auto py-6 max-h-60 pr-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent" style={{ scrollbarWidth: 'thin' }}>
-                  <p className="text-zinc-500 uppercase text-[10px] font-bold tracking-widest mb-2">Mô tả</p>
+                  <p className="text-zinc-500 uppercase text-[10px] font-bold tracking-widest mb-2">{t.audioDrawer.descriptionLabel}</p>
                   <p ref={descRef} className="text-zinc-400 text-sm leading-relaxed">{poi.translation.description}</p>
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 h-4 bg-linear-to-t from-zinc-950 to-transparent pointer-events-none" />
@@ -248,7 +250,7 @@ export function PoiAudioDrawer({ poi, isGuidanceActive, onToggleGuidance, onClos
             </div>
 
             <div className="mx-4 mb-6 bg-zinc-800/60 border border-white/8 rounded-2xl p-4">
-              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Thuyết minh âm thanh</p>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">{t.audioDrawer.audioGuideLabel}</p>
               <div className="mb-2 relative">
                 <input
                   type="range"
