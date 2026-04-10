@@ -21,6 +21,7 @@ import {
 import { Modal } from "../../components/Modal";
 import { api } from "@/lib/api";
 import "leaflet/dist/leaflet.css";
+import type { Map as LeafletMap } from "leaflet";
 
 const ASSET_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(
   /\/api\/?$/,
@@ -101,7 +102,7 @@ export default function POIManagement() {
     lng: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mapInstance, setMapInstance] = useState<any>(null);
+  const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -754,8 +755,8 @@ export default function POIManagement() {
                     zoom={15}
                     style={{ height: 260, width: "100%" }}
                     scrollWheelZoom={modalMode !== "view"}
-                    whenReady={(event) => {
-                      const map = event.target;
+                    ref={(map) => {
+                      if (!map) return;
                       setMapInstance(map);
                       map.invalidateSize();
                       const targetZoom = Math.max(map.getZoom(), 15);
