@@ -75,17 +75,27 @@ interface TourMapProps {
 }
 
 export default function TourMap({ userPos, pois, onTriggerAudio, onMapClick }: TourMapProps) {
-  const visitedPois = useRef<Set<string>>(new Set());
+  const lastTriggeredIdRef = useRef<string | null>(null);
+  const currentNearbyIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (userPos && pois.length > 0) {
-      pois.forEach((poi) => {
-        // Simple geofencing: if within 25 meters and not visited in this session
-        if (poi.distance <= 50 && !visitedPois.current.has(poi.id)) {
-          visitedPois.current.add(poi.id);
-          onTriggerAudio(poi);
+      // Find the first POI within 50m range
+      const nearbyPoi = pois.find(p => p.distance <= 50);
+
+      if (nearbyPoi) {
+        if (nearbyPoi.id !== lastTriggeredIdRef.current) {
+          lastTriggeredIdRef.current = nearbyPoi.id;
+          currentNearbyIdRef.current = nearbyPoi.id;
+          onTriggerAudio(nearbyPoi);
         }
-      });
+      } else {
+        // When completely out of range of any 50m POI, reset session-level consecutive trigger
+        // This allows re-triggering the same POI if they leave and come back, 
+        // regardless of whether they hit other POIs in between.
+        lastTriggeredIdRef.current = null;
+        currentNearbyIdRef.current = null;
+      }
     }
   }, [userPos, pois, onTriggerAudio]);
 
@@ -114,6 +124,19 @@ export default function TourMap({ userPos, pois, onTriggerAudio, onMapClick }: T
                 center={userPos} 
                 radius={50} 
                 pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1 }} 
+            />
+            {/* POI Loading Range Circle (1500m) */}
+            <Circle 
+                center={userPos} 
+                radius={1500} 
+                pathOptions={{ 
+                  color: '#f97316', 
+                  fillColor: '#f97316', 
+                  fillOpacity: 0.03, 
+                  dashArray: '10, 10',
+                  weight: 1,
+                  interactive: false
+                }} 
             />
             <MapTracker pos={userPos} />
           </>

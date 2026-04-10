@@ -60,6 +60,7 @@ function TourPageContent() {
   
   const [audioQueue, setAudioQueue] = useState<POI[]>([]);
   const isPlayingRef = useRef(false);
+  const lastPlayedPoiIdRef = useRef<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const fetchPois = useCallback(async (lat: number, lng: number) => {
@@ -115,6 +116,9 @@ function TourPageContent() {
       isPlayingRef.current = false;
       setAudioQueue([poi]);
     } else {
+      // Auto-trigger logic: don't auto-add the same POI that was last played
+      if (poi.id === lastPlayedPoiIdRef.current) return;
+
       setAudioQueue((prev: POI[]) => {
         if (activePoi?.id === poi.id && isPlayingRef.current) return prev;
         if (prev.find(p => p.id === poi.id)) return prev;
@@ -173,6 +177,7 @@ function TourPageContent() {
                return { ...prev, translation: { ...prev.translation, description: data.data.text } };
             });
             audio.src = data.data.audioUrl || data.data.audioBase64;
+            lastPlayedPoiIdRef.current = nextPoi.id;
             await audio.play().catch((e) => {
               console.warn('Autoplay blocked:', e);
               next();

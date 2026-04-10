@@ -18,6 +18,7 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isStoppingRef = useRef(false);
   const router = useRouter();
   const t = useTranslation();
 
@@ -46,18 +47,34 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
   }, []);
 
   const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      try {
-        if (scannerRef.current.getState() > 1) {
-          await scannerRef.current.stop();
-        }
-        await scannerRef.current.clear();
-      } catch (err) {
-        console.warn('Error during scanner stop/clear:', err);
-      } finally {
-        scannerRef.current = null;
-        setIsScanning(false);
+    if (isStoppingRef.current) return;
+    if (!scannerRef.current) {
+      setIsScanning(false);
+      return;
+    }
+
+    isStoppingRef.current = true;
+    try {
+      const state = scannerRef.current.getState();
+      if (state > 1) { // 2 = SCANNING, 3 = PAUSED
+        await scannerRef.current.stop();
       }
+      
+      // Attempt to clear, but don't fail if the DOM element is already removed by React
+      try {
+        await scannerRef.current.clear();
+      } catch (clearErr) {
+        // Ignored: common if the div was already unmounted
+      }
+    } catch (err) {
+      // Logic for NotFoundError or other termination race conditions
+      if (!(err instanceof Error && err.message.includes('removeChild'))) {
+        console.warn('Error during scanner stop:', err);
+      }
+    } finally {
+      scannerRef.current = null;
+      isStoppingRef.current = false;
+      setIsScanning(false);
     }
   }, []);
 

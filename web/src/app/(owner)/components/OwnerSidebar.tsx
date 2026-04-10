@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   MapPin,
   Utensils,
-  Image,
   QrCode,
   BarChart3,
   Settings,
@@ -30,7 +29,6 @@ export function OwnerSidebar() {
     { icon: LayoutDashboard, label: "Dashboard", path: "/owner" },
     { icon: MapPin, label: "POI Management", path: "/owner/poi" },
     { icon: Utensils, label: "Menu Management", path: "/owner/menu" },
-    { icon: Image, label: "Media Library", path: "/owner/media" },
     { icon: QrCode, label: "QR Code", path: "/owner/qr" },
     { icon: BarChart3, label: "Analytics", path: "/owner/analytics" },
   ];
