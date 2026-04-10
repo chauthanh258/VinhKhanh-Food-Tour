@@ -6,12 +6,15 @@ import adminRoutes from './admin.routes';
 import menuItemRoutes from './menuItem.routes';
 import categoryRoutes from './category.routes';
 
+import publicCategoryRoutes from './public.category.routes';
+
 const router = Router();
 
 router.use('/auth', authRoutes);
 router.use('/pois', poiRoutes);
 router.use('/admin', adminRoutes);
 router.use('/admin', categoryRoutes);
+router.use('/categories', publicCategoryRoutes);
 router.use('/', ownerRoutes);
 router.use('/', menuItemRoutes);
 

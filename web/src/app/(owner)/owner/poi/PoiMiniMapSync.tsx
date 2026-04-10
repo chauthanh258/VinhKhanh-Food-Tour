@@ -18,7 +18,16 @@ export default function PoiMiniMapSync({
 
   useEffect(() => {
     if (!center) return;
-    map.setView(center, map.getZoom(), { animate: false });
+
+    const applyCenter = () => {
+      // Leaflet inside modal may calculate an incorrect viewport until size is invalidated.
+      map.invalidateSize();
+      const targetZoom = Math.max(map.getZoom(), 15);
+      map.setView(center, targetZoom, { animate: false });
+    };
+
+    const timer = window.setTimeout(applyCenter, 80);
+    return () => window.clearTimeout(timer);
   }, [map, center]);
 
   useMapEvents({

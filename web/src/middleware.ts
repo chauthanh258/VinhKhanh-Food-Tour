@@ -12,6 +12,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/admin') || 
     pathname.startsWith('/owner') ||
     pathname.startsWith('/settings') || 
+    pathname.startsWith('/profile') ||
     pathname === '/';
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
 

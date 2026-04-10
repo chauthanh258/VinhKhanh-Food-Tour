@@ -100,53 +100,46 @@ export default function POIManagement() {
     lat: 0,
     lng: 0,
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string>("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const selectedPosition: [number, number] =
-    formData.lat !== 0 || formData.lng !== 0
-      ? [formData.lat, formData.lng]
-      : defaultMapCenter;
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
+  const hasSelectedPosition = formData.lat !== 0 || formData.lng !== 0;
+  const selectedPosition: [number, number] | null = hasSelectedPosition
+    ? [formData.lat, formData.lng]
+    : null;
 
   useEffect(() => {
     return () => {
-      if (imagePreview?.startsWith("blob:")) {
+      if (imagePreview.startsWith("blob:")) {
         URL.revokeObjectURL(imagePreview);
       }
     };
   }, [imagePreview]);
 
   useEffect(() => {
-    if (!imageFile) {
-      if (!selectedPoi?.translations?.[0]?.imageUrl) {
-        setImagePreview(null);
-      }
-      return;
-    }
+    if (!isModalOpen || modalMode === "delete" || !mapInstance || !selectedPosition) return;
 
-    const previewUrl = URL.createObjectURL(imageFile);
-    setImagePreview(previewUrl);
+    const center: [number, number] = selectedPosition;
+    const applyMapLayout = () => {
+      mapInstance.invalidateSize();
+      const targetZoom = Math.max(mapInstance.getZoom(), 15);
+      mapInstance.setView(center, targetZoom, { animate: false });
+    };
+
+    const timers = [0, 120, 300].map((delay) =>
+      window.setTimeout(applyMapLayout, delay)
+    );
 
     return () => {
-      URL.revokeObjectURL(previewUrl);
+      timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [imageFile, selectedPoi]);
-
-  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const nextFile = event.target.files?.[0] || null;
-    setImageFile(nextFile);
-  };
-
-  const clearImage = () => {
-    setImageFile(null);
-    setFormData((prev) => ({ ...prev, imageUrl: '' }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  }, [isModalOpen, modalMode, mapInstance, selectedPosition]);
 
   // Fetch POIs
   const fetchPOIs = useCallback(async () => {
@@ -169,6 +162,7 @@ export default function POIManagement() {
                   {
                     ...poi.translations[0],
                     imageUrl: normalizePoiImageUrl(poi.translations[0]?.imageUrl),
+                    audioUrl: poi.translations[0]?.audioUrl,
                   },
                   ...poi.translations.slice(1),
                 ]
@@ -192,9 +186,45 @@ export default function POIManagement() {
     fetchPOIs();
   }, [fetchPOIs]);
 
+  const requestCurrentLocation = useCallback(() => {
+    setIsResolvingLocation(true);
+    setLocationError("");
+
+    if (!navigator.geolocation) {
+      setIsResolvingLocation(false);
+      setLocationError("Browser does not support geolocation. Please pick a location on the map.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData((prev) => ({
+          ...prev,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }));
+        setIsResolvingLocation(false);
+      },
+      () => {
+        // Do not force default coordinates as selected location when GPS fails.
+        setFormData((prev) => ({
+          ...prev,
+          lat: 0,
+          lng: 0,
+        }));
+        setIsResolvingLocation(false);
+        setLocationError("Cannot get current location. Please allow location permission or pick on map.");
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }, []);
+
   const handleOpenModal = (mode: "add" | "edit" | "view" | "delete", poi?: POIItem) => {
     setModalMode(mode);
+    setMapInstance(null);
+    setLocationError("");
     if (poi) {
+      setIsResolvingLocation(false);
       setSelectedPoi(poi);
       const normalizedImageUrl = normalizePoiImageUrl(poi.translations?.[0]?.imageUrl);
       setFormData({
@@ -207,31 +237,64 @@ export default function POIManagement() {
         lat: poi.lat,
         lng: poi.lng,
       });
+      setImagePreview(normalizedImageUrl);
       setImageFile(null);
       setAudioFile(null);
-      setImagePreview(poi.translations?.[0]?.imageUrl || null);
     } else {
       setSelectedPoi(null);
-      setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
+      const emptyForm = { name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 };
+      setFormData(emptyForm);
+      setImagePreview("");
       setImageFile(null);
       setAudioFile(null);
-      setImagePreview(null);
+
+      if (mode === "add") {
+        requestCurrentLocation();
+      } else {
+        setFormData({ ...emptyForm, lat: defaultMapCenter[0], lng: defaultMapCenter[1] });
+        setIsResolvingLocation(false);
+      }
     }
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setMapInstance(null);
+    setIsResolvingLocation(false);
+    setLocationError("");
     setSelectedPoi(null);
     setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
+    setImagePreview("");
     setImageFile(null);
     setAudioFile(null);
-    setImagePreview(null);
+  };
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    setImagePreview("");
+    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
       alert("Please enter POI name");
+      return;
+    }
+
+    if (!hasSelectedPosition) {
+      alert("Please select a valid location before saving.");
       return;
     }
 
@@ -254,23 +317,20 @@ export default function POIManagement() {
         ],
       };
 
+      let poiId = selectedPoi?.id;
+
       if (modalMode === "add") {
-        const createResponse = await api.post("/pois", payload);
-        const createdPoiId = createResponse?.data?.id;
-        if (createdPoiId && (imageFile || audioFile)) {
-          const mediaFormData = new FormData();
-          if (imageFile) mediaFormData.append("image", imageFile);
-          if (audioFile) mediaFormData.append("audio", audioFile);
-          await api.post(`/pois/${createdPoiId}/media`, mediaFormData);
-        }
-      } else if (modalMode === "edit" && selectedPoi) {
-        await api.put(`/pois/${selectedPoi.id}`, payload);
-        if (imageFile || audioFile) {
-          const mediaFormData = new FormData();
-          if (imageFile) mediaFormData.append("image", imageFile);
-          if (audioFile) mediaFormData.append("audio", audioFile);
-          await api.post(`/pois/${selectedPoi.id}/media`, mediaFormData);
-        }
+        const response = await api.post("/pois", payload);
+        poiId = response.data?.id;
+      } else if (modalMode === "edit" && poiId) {
+        await api.put(`/pois/${poiId}`, payload);
+      }
+
+      if (poiId && (imageFile || audioFile)) {
+        const mediaFormData = new FormData();
+        if (imageFile) mediaFormData.append("image", imageFile);
+        if (audioFile) mediaFormData.append("audio", audioFile);
+        await api.post(`/pois/${poiId}/media`, mediaFormData);
       }
 
       handleCloseModal();
@@ -675,42 +735,6 @@ export default function POIManagement() {
                   placeholder="Ví dụ: 30.000đ - 120.000đ"
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                  POI Image
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    disabled={modalMode === "view"}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={modalMode === "view"}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-semibold border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-60"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Choose image
-                  </button>
-                  {(imagePreview || formData.imageUrl) && modalMode !== "view" && (
-                    <button
-                      type="button"
-                      onClick={clearImage}
-                      className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Chọn ảnh từ thiết bị, file sẽ được lưu vào img_modules.
-                </p>
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -718,36 +742,66 @@ export default function POIManagement() {
                 Location (click on map to choose)
               </label>
               <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
-                <MapContainer
-                  key={modalMode}
-                  center={selectedPosition}
-                  zoom={15}
-                  style={{ height: 260, width: "100%" }}
-                  scrollWheelZoom={modalMode !== "view"}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <PoiMiniMapSync
+                {modalMode === "add" && isResolvingLocation && !selectedPosition ? (
+                  <div className="h-[260px] flex items-center justify-center gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Detecting your current location...
+                  </div>
+                ) : selectedPosition ? (
+                  <MapContainer
+                    key={modalMode}
                     center={selectedPosition}
-                    editable={modalMode !== "view"}
-                    onPick={(lat, lng) => setFormData((prev) => ({ ...prev, lat, lng }))}
-                  />
-                  <CircleMarker
-                    center={selectedPosition}
-                    radius={10}
-                    pathOptions={{
-                      color: "#f97316",
-                      weight: 2,
-                      fillColor: "#fb923c",
-                      fillOpacity: 0.9,
+                    zoom={15}
+                    style={{ height: 260, width: "100%" }}
+                    scrollWheelZoom={modalMode !== "view"}
+                    whenReady={(event) => {
+                      const map = event.target;
+                      setMapInstance(map);
+                      map.invalidateSize();
+                      const targetZoom = Math.max(map.getZoom(), 15);
+                      map.setView(selectedPosition, targetZoom, { animate: false });
                     }}
-                  />
-                </MapContainer>
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <PoiMiniMapSync
+                      center={selectedPosition}
+                      editable={modalMode !== "view"}
+                      onPick={(lat, lng) => setFormData((prev) => ({ ...prev, lat, lng }))}
+                    />
+                    <CircleMarker
+                      center={selectedPosition}
+                      radius={10}
+                      pathOptions={{
+                        color: "#f97316",
+                        weight: 2,
+                        fillColor: "#fb923c",
+                        fillOpacity: 0.9,
+                      }}
+                    />
+                  </MapContainer>
+                ) : (
+                  <div className="h-[260px] flex flex-col items-center justify-center gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-4 text-center">
+                    <p>Current location is unavailable.</p>
+                    {modalMode === "add" && (
+                      <button
+                        type="button"
+                        onClick={requestCurrentLocation}
+                        className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                      >
+                        Retry current location
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
+              {locationError && (
+                <p className="text-xs text-red-500">{locationError}</p>
+              )}
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Selected: {selectedPosition[0].toFixed(6)}, {selectedPosition[1].toFixed(6)}
+                Selected: {selectedPosition ? `${selectedPosition[0].toFixed(6)}, ${selectedPosition[1].toFixed(6)}` : "--"}
               </p>
             </div>
 
@@ -758,7 +812,7 @@ export default function POIManagement() {
                 </label>
                 <input
                   type="text"
-                  value={selectedPosition[0].toFixed(6)}
+                  value={selectedPosition ? selectedPosition[0].toFixed(6) : "--"}
                   readOnly
                   className="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-900 border-none rounded-xl text-gray-700 dark:text-gray-300"
                 />
@@ -769,7 +823,7 @@ export default function POIManagement() {
                 </label>
                 <input
                   type="text"
-                  value={selectedPosition[1].toFixed(6)}
+                  value={selectedPosition ? selectedPosition[1].toFixed(6) : "--"}
                   readOnly
                   className="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-900 border-none rounded-xl text-gray-700 dark:text-gray-300"
                 />
@@ -797,23 +851,33 @@ export default function POIManagement() {
                 </label>
                 <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-800/40 space-y-3">
                   <div className="h-40 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-                    {imagePreview ? (
+                    {(imagePreview || formData.imageUrl) ? (
                       <img
-                        src={imagePreview}
+                        src={imagePreview || formData.imageUrl}
                         alt="POI preview"
                         className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <span className="text-sm text-gray-400">No image selected</span>
                     )}
                   </div>
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     disabled={modalMode === "view"}
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-xl file:border-0 file:bg-orange-500 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-orange-600 disabled:opacity-60"
+                    onChange={handleImageSelect}
+                    className="hidden"
                   />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={modalMode === "view"}
+                    className="w-full py-2 px-4 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 transition-colors disabled:opacity-60"
+                  >
+                    {imagePreview || formData.imageUrl ? "Change Image" : "Choose Image"}
+                  </button>
                 </div>
               </div>
 
@@ -824,8 +888,8 @@ export default function POIManagement() {
                 <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-800/40 space-y-3">
                   <div className="h-40 rounded-xl bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-center px-4">
                     <div>
-                      <p className="font-semibold text-gray-700 dark:text-gray-200">
-                        {audioFile ? audioFile.name : selectedPoi?.translations?.[0]?.audioUrl ? "Uploaded audio available" : "No audio selected"}
+                      <p className="font-semibold text-gray-700 dark:text-gray-200 break-all line-clamp-2">
+                        {audioFile ? audioFile.name : selectedPoi?.translations?.[0]?.audioUrl ? "Audio narration uploaded" : "No audio selected"}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Upload an MP3, WAV, or M4A narration file.
@@ -833,12 +897,21 @@ export default function POIManagement() {
                     </div>
                   </div>
                   <input
+                    ref={audioInputRef}
                     type="file"
                     accept="audio/*"
                     disabled={modalMode === "view"}
                     onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-xl file:border-0 file:bg-orange-500 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white hover:file:bg-orange-600 disabled:opacity-60"
+                    className="hidden"
                   />
+                  <button
+                    type="button"
+                    onClick={() => audioInputRef.current?.click()}
+                    disabled={modalMode === "view"}
+                    className="w-full py-2 px-4 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 transition-colors disabled:opacity-60"
+                  >
+                    {audioFile || selectedPoi?.translations?.[0]?.audioUrl ? "Change Audio" : "Choose Audio"}
+                  </button>
                 </div>
               </div>
             </div>

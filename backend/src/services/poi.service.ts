@@ -256,3 +256,7 @@ export const getTranslatedDescriptionAndTts = async (poiId: string, uiLang: stri
   });
   return result;
 };
+
+export const listOwnerPOIs = async (ownerId: string, filters: any) => {
+  return poiRepo.findPOIsByOwnerWithFilters(ownerId, filters);
+};

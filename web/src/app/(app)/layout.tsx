@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Explore the best street food in District 4",
 };
 
-import BottomNav from "@/components/shared/BottomNav";
+import BottomNav from "@/app/(app)/tour/components/BottomNav";
 import { Suspense } from "react";
 
 export default function AppLayout({

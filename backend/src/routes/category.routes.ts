@@ -29,7 +29,7 @@ const router = Router();
  *       200:
  *         description: List of categories
  */
-router.get('/categories', authenticate, authorize(['ADMIN']), categoryController.getAllCategories);
+router.get('/categories', authenticate, categoryController.getAllCategories);
 
 /**
  * @swagger

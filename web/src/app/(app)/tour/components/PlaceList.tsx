@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { MapPin, Volume2, ChevronRight, Star, UtensilsCrossed, Tag } from 'lucide-react';
-import Image from 'next/image';
+import { useState, useMemo, useEffect } from 'react';
+import { MapPin, Volume2, ChevronRight, Star, UtensilsCrossed, Tag, Search } from 'lucide-react';
 import PlaceDetail from './PlaceDetail';
+import { useTranslation } from '@/i18n';
 
 interface POI {
   id: string;
@@ -11,6 +11,7 @@ interface POI {
   lng: number;
   rating: number;
   distance: number;
+  categoryId?: string;
   translation: {
     name: string;
     description: string;
@@ -27,27 +28,100 @@ interface PlaceListProps {
   onTriggerAudio: (poi: POI) => void;
 }
 
+interface Category {
+  id: string;
+  translations: { name: string; language: string }[];
+}
+
 export default function PlaceList({ pois, onSelectPoi, onTriggerAudio }: PlaceListProps) {
   const [selectedPoi, setSelectedPoi] = useState<POI | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const t = useTranslation();
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/categories?includeInactive=false`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.data.categories)) {
+          setCategories(data.data.categories);
+        }
+      })
+      .catch(err => console.error("Failed to fetch categories:", err));
+  }, []);
+
+  const filteredPois = useMemo(() => {
+    return pois.filter(poi => {
+      const tr = poi.translation;
+      const searchStr = `${tr.name} ${tr.specialties || ''}`.toLowerCase();
+      
+      if (searchQuery && !searchStr.includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      
+      if (activeCategory !== 'all' && poi.categoryId !== activeCategory) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [pois, searchQuery, activeCategory]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-100px)]">
-      {/* Scrollable List Container */}
-        <div className="flex items-center justify-between p-4">
+      {/* Header and Controls */}
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-white tracking-tight">Food Tour</h2>
-            <p className="text-zinc-500 text-sm mt-1 font-medium">Khám phá ẩm thực Vĩnh Khánh</p>
+            <h2 className="text-2xl font-bold text-white tracking-tight">{t.placeList.title}</h2>
+            <p className="text-zinc-500 text-sm mt-1 font-medium">{t.placeList.subtitle}</p>
           </div>
           <div className="flex flex-col items-end gap-1">
              <span className="text-[10px] font-bold text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-1 rounded-full uppercase tracking-widest leading-none py-1.5">
-               {pois.length} quán ăn
+               {t.placeList.placesCount(filteredPois.length)}
              </span>
           </div>
         </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+        {/* Search Bar */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-zinc-500" />
+          </div>
+          <input
+            type="text"
+            className="block w-full pl-11 pr-4 py-3.5 border border-white/10 rounded-2xl bg-zinc-900/60 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 backdrop-blur-md transition-all font-medium"
+            placeholder={t.placeList.searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Categories (Combobox) */}
+        <div className="relative">
+          <select
+            value={activeCategory}
+            onChange={(e) => setActiveCategory(e.target.value)}
+            className="w-full appearance-none bg-zinc-900/60 border border-white/10 rounded-2xl px-4 py-3.5 text-white font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/50 backdrop-blur-md transition-all cursor-pointer"
+          >
+            <option value="all">{t.placeList.allCategories}</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>
+                {cat.translations?.[0]?.name || t.placeList.unknownCategory}
+              </option>
+            ))}
+          </select>
+          <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+            <ChevronRight className="h-5 w-5 text-zinc-500 rotate-90" />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
 
         <div className="grid gap-5">
-          {pois.map((poi) => (
+          {filteredPois.map((poi) => (
             <button
               key={poi.id}
               onClick={() => setSelectedPoi(poi)}
@@ -87,14 +161,14 @@ export default function PlaceList({ pois, onSelectPoi, onTriggerAudio }: PlaceLi
                   <div className="flex items-start gap-2 text-zinc-400">
                     <UtensilsCrossed size={14} className="mt-1 flex-shrink-0 text-orange-500/80" />
                     <p className="text-sm font-medium leading-relaxed italic line-clamp-2">
-                      {poi.translation.specialties || "Trải nghiệm ẩm thực địa phương"}
+                      {poi.translation.specialties || t.placeList.defaultSpecialties}
                     </p>
                   </div>
                   
                   <div className="flex items-center gap-2 text-zinc-500">
                     <Tag size={14} className="flex-shrink-0" />
                     <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
-                      {poi.translation.priceRange || "Giá vỉa hè"}
+                      {poi.translation.priceRange || t.placeList.defaultPrice}
                     </span>
                   </div>
                 </div>
@@ -104,7 +178,7 @@ export default function PlaceList({ pois, onSelectPoi, onTriggerAudio }: PlaceLi
                     <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center border border-orange-500/10">
                       <Volume2 size={16} className="text-orange-500" />
                     </div>
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Sẵn sàng thuyết minh</span>
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{t.placeList.readyToGuide}</span>
                   </div>
                   <div className="bg-white/10 p-2 rounded-full group-hover:bg-orange-500 group-hover:text-white transition-all duration-300">
                     <ChevronRight size={20} className="text-zinc-400 group-hover:text-white" />
@@ -115,12 +189,12 @@ export default function PlaceList({ pois, onSelectPoi, onTriggerAudio }: PlaceLi
           ))}
         </div>
 
-        {pois.length === 0 && (
+        {filteredPois.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-zinc-500 gap-4">
             <div className="p-6 rounded-full bg-zinc-900/50 grayscale opacity-50">
               <MapPin size={40} />
             </div>
-            <p className="text-sm font-medium uppercase tracking-widest">Đang tìm quán ăn xung quanh...</p>
+            <p className="text-sm font-medium uppercase tracking-widest">{t.placeList.searchingNearby}</p>
           </div>
         )}
       </div>
