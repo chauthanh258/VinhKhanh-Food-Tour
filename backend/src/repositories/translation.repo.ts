@@ -13,6 +13,12 @@ export const upsertTranslation = async (poiId: string, data: any) => {
   });
 };
 
+export const findTranslationByPOIId = async (poiId: string) => {
+  return prisma.pOITranslation.findFirst({
+    where: { poiId }
+  });
+};
+
 export const deleteTranslation = async (id: string) => {
   return prisma.pOITranslation.delete({
     where: { id }

@@ -63,9 +63,12 @@ export const poiApi = {
       description?: string;
       specialties?: string;
       priceRange?: string;
+      language: string;
     }>;
   }) => {
-    const response = await api.post('/admin/pois', data);
+    // Both Admin and Owner use the base /pois endpoint for creation
+    // The backend handles moderation for Owners
+    const response = await api.post('/pois', data);
     return response.data;
   },
 
@@ -86,7 +89,8 @@ export const poiApi = {
       }>;
     }
   ) => {
-    const response = await api.put(`/admin/pois/${id}`, data);
+    // Both Admin and Owner use the base /pois/:id endpoint for updates
+    const response = await api.put(`/pois/${id}`, data);
     return response.data;
   },
 
@@ -100,8 +104,13 @@ export const poiApi = {
     return response.data;
   },
 
+  getByOwner: async (ownerId: string) => {
+    const response = await api.get(`/owners/${ownerId}/pois`);
+    return response.data;
+  },
+
   requestDelete: async (id: string) => {
-    const response = await api.post(`/pois/${id}/request-delete`);
+    const response = await api.post(`/pois/${id}/request-delete`, {});
     return response.data;
   },
 

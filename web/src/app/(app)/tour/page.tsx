@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Volume2, VolumeX, ChevronDown, MapPin, Star, DollarSign, Utensils, Play, Pause, SkipForward, ChevronUp, X } from 'lucide-react';
+import { Volume2, VolumeX, ChevronDown, MapPin, Star, DollarSign, Utensils, Play, Pause, SkipForward, ChevronUp, X, LogOut } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 import PlaceList from '@/app/(app)/tour/components/PlaceList';
@@ -411,7 +411,7 @@ function ReopenButton({ poi, onClick }: { poi: POI; onClick: () => void }) {
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function TourPage() {
-  const language = useUserStore((s) => s.language);
+  const { language, logout } = useUserStore();
   const searchParams = useSearchParams();
   const router = useRouter();
   const activeView = searchParams.get('view') || 'map';
@@ -571,7 +571,16 @@ export default function TourPage() {
       {/* Header Overlay */}
       {activeView === 'map' && (
         <header className="absolute top-0 left-0 right-0 z-50 p-4 pointer-events-none">
-          <div className="flex items-center justify-end pointer-events-auto">
+          <div className="flex items-center justify-between pointer-events-auto">
+            <button
+              onClick={() => { logout(); router.push('/login'); }}
+              className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2 text-zinc-400 hover:text-white transition-colors"
+              title="Đăng xuất"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-[10px] font-bold uppercase tracking-wider">Thoát</span>
+            </button>
+
             <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
               <span className="text-[10px] font-bold uppercase tracking-wider">GPS Active</span>

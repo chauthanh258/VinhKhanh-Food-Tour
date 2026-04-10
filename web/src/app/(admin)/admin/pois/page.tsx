@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { Edit, Trash2, Search, Plus } from 'lucide-react';

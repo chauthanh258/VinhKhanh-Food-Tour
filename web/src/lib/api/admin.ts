@@ -34,27 +34,22 @@ export interface PendingRequestsResponse {
 
 export const adminApi = {
   getPendingRequests: async () => {
-    const response = await api.get('/admin/pending-requests');
-    return response.data as PendingRequestsResponse;
-  },
-
-  approvePOI: async (id: string) => {
-    const response = await api.patch(`/admin/pois/${id}/approve`, { status: 'APPROVED' });
+    const response = await api.get('/moderation/admin/requests');
     return response.data;
   },
 
-  rejectPOI: async (id: string) => {
-    const response = await api.patch(`/admin/pois/${id}/approve`, { status: 'REJECTED' });
+  requestUpgrade: async () => {
+    const response = await api.post('/moderation/request-upgrade', {});
     return response.data;
   },
 
-  approveUserUpgrade: async (id: string) => {
-    const response = await api.post(`/admin/requests/user/${id}/approve`, {});
+  approveRequest: async (id: string) => {
+    const response = await api.post(`/moderation/admin/requests/${id}/approve`, {});
     return response.data;
   },
 
-  rejectUserUpgrade: async (id: string, rejectionReason: string) => {
-    const response = await api.post(`/admin/requests/user/${id}/reject`, { rejectionReason });
+  rejectRequest: async (id: string) => {
+    const response = await api.post(`/moderation/admin/requests/${id}/reject`, {});
     return response.data;
   },
 };

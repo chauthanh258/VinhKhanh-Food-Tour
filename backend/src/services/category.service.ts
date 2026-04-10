@@ -25,12 +25,14 @@ export const getAllCategories = async (includeInactive: boolean = false) => {
 
   const countsByCategoryId = new Map(activePoiCounts.map((item) => [item.categoryId, item._count._all]));
 
-  const categoriesWithActiveCount = categories.map((category) => ({
-    ...category,
-    _count: { pois: countsByCategoryId.get(category.id) ?? 0 },
-  }));
-
-  return { categories: categoriesWithActiveCount, total };
+  return { 
+    categories: categories.map(cat => ({
+      ...cat,
+      translations: cat.translations ? [cat.translations] : [],
+      _count: { pois: countsByCategoryId.get(cat.id) ?? 0 }
+    })), 
+    total 
+  };
 };
 
 export const getCategoryById = async (id: string) => {
@@ -49,6 +51,7 @@ export const getCategoryById = async (id: string) => {
 
   return {
     ...category,
+    translations: category.translations ? [category.translations] : [],
     _count: { pois: activePoiCount },
   };
 };
@@ -76,7 +79,10 @@ export const createCategory = async (
     },
   });
 
-  return category;
+  return {
+    ...category,
+    translations: category.translations ? [category.translations] : []
+  };
 };
 
 export const updateCategory = async (
@@ -107,13 +113,12 @@ export const updateCategory = async (
 
   if (data.translations) {
     for (const translation of data.translations) {
-      const existingTranslation = existingCategory.translations.find(
-        (t) => t.language === translation.language
-      );
+      const transObj = existingCategory.translations;
+      const existingTranslation = transObj && (transObj as any).language === translation.language ? transObj : null;
 
       if (existingTranslation) {
         await prisma.categoryTranslation.update({
-          where: { id: existingTranslation.id },
+          where: { id: (existingTranslation as any).id },
           data: {
             name: translation.name,
             description: translation.description,
@@ -146,6 +151,7 @@ export const updateCategory = async (
 
   return {
     ...updatedCategory,
+    translations: updatedCategory?.translations ? [updatedCategory.translations] : [],
     _count: { pois: activePoiCount },
   };
 };
@@ -173,7 +179,7 @@ export const deleteCategory = async (adminId: string, categoryId: string) => {
     throw new Error(`Không thể xóa danh mục vì còn ${activePoiCount} POI hoạt động thuộc danh mục này. Vui lòng chuyển POI sang danh mục khác hoặc tạm ngưng POI trước.`);
   }
 
-  return prisma.category.update({
+  const result = await prisma.category.update({
     where: { id: categoryId },
     data: {
       deletedAt: new Date(),
@@ -181,6 +187,11 @@ export const deleteCategory = async (adminId: string, categoryId: string) => {
     },
     include: { translations: true },
   });
+  
+  return {
+    ...result,
+    translations: result.translations ? [result.translations] : []
+  };
 };
 
 export const restoreCategory = async (adminId: string, categoryId: string) => {
@@ -202,6 +213,7 @@ export const restoreCategory = async (adminId: string, categoryId: string) => {
 
   return {
     ...restoredCategory,
+    translations: restoredCategory.translations ? [restoredCategory.translations] : [],
     _count: { pois: activePoiCount },
   };
 };

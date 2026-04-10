@@ -11,6 +11,8 @@ export { adminApi } from './admin';
 export type { PendingPOIRequest, PendingUserUpgrade, PendingRequestsResponse } from './admin';
 
 export { authApi } from './auth';
+export { moderationApi } from './moderation';
+export type { ModerationRequest, ModerationType, ModerationStatus } from './moderation';
 
 export { settingsApi, DEFAULT_SETTINGS } from './settings';
 export type { SystemSettings } from './settings';

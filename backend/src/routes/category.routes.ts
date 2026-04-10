@@ -29,7 +29,7 @@ const router = Router();
  *       200:
  *         description: List of categories
  */
-router.get('/categories', authenticate, authorize(['ADMIN']), categoryController.getAllCategories);
+router.get('/categories', authenticate, authorize(['ADMIN', 'OWNER']), categoryController.getAllCategories);
 
 /**
  * @swagger
@@ -51,7 +51,7 @@ router.get('/categories', authenticate, authorize(['ADMIN']), categoryController
  *       404:
  *         description: Category not found
  */
-router.get('/categories/:id', authenticate, authorize(['ADMIN']), categoryController.getCategoryById);
+router.get('/categories/:id', authenticate, authorize(['ADMIN', 'OWNER']), categoryController.getCategoryById);
 
 /**
  * @swagger
