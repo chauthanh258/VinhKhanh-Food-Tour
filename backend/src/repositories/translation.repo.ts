@@ -18,3 +18,9 @@ export const deleteTranslation = async (id: string) => {
     where: { id }
   });
 };
+
+export const findTranslationByPOIId = async (poiId: string) => {
+  return prisma.pOITranslation.findFirst({
+    where: { poiId }
+  });
+};

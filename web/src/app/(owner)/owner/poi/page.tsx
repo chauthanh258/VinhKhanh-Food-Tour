@@ -101,13 +101,15 @@ export default function POIManagement() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mapInstance, setMapInstance] = useState<any>(null);
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const selectedPosition: [number, number] =
-    formData.lat !== 0 || formData.lng !== 0
-      ? [formData.lat, formData.lng]
-      : defaultMapCenter;
+  const hasSelectedPosition = formData.lat !== 0 || formData.lng !== 0;
+  const selectedPosition: [number, number] | null = hasSelectedPosition
+    ? [formData.lat, formData.lng]
+    : null;
 
   useEffect(() => {
     return () => {
@@ -116,6 +118,25 @@ export default function POIManagement() {
       }
     };
   }, [imagePreview]);
+
+  useEffect(() => {
+    if (!isModalOpen || modalMode === "delete" || !mapInstance || !selectedPosition) return;
+
+    const center: [number, number] = selectedPosition;
+    const applyMapLayout = () => {
+      mapInstance.invalidateSize();
+      const targetZoom = Math.max(mapInstance.getZoom(), 15);
+      mapInstance.setView(center, targetZoom, { animate: false });
+    };
+
+    const timers = [0, 120, 300].map((delay) =>
+      window.setTimeout(applyMapLayout, delay)
+    );
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [isModalOpen, modalMode, mapInstance, selectedPosition]);
 
   // Fetch POIs
   const fetchPOIs = useCallback(async () => {
@@ -161,9 +182,45 @@ export default function POIManagement() {
     fetchPOIs();
   }, [fetchPOIs]);
 
+  const requestCurrentLocation = useCallback(() => {
+    setIsResolvingLocation(true);
+    setLocationError("");
+
+    if (!navigator.geolocation) {
+      setIsResolvingLocation(false);
+      setLocationError("Browser does not support geolocation. Please pick a location on the map.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFormData((prev) => ({
+          ...prev,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }));
+        setIsResolvingLocation(false);
+      },
+      () => {
+        // Do not force default coordinates as selected location when GPS fails.
+        setFormData((prev) => ({
+          ...prev,
+          lat: 0,
+          lng: 0,
+        }));
+        setIsResolvingLocation(false);
+        setLocationError("Cannot get current location. Please allow location permission or pick on map.");
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }, []);
+
   const handleOpenModal = (mode: "add" | "edit" | "view" | "delete", poi?: POIItem) => {
     setModalMode(mode);
+    setMapInstance(null);
+    setLocationError("");
     if (poi) {
+      setIsResolvingLocation(false);
       setSelectedPoi(poi);
       const normalizedImageUrl = normalizePoiImageUrl(poi.translations?.[0]?.imageUrl);
       setFormData({
@@ -180,28 +237,16 @@ export default function POIManagement() {
       setImageFile(null);
     } else {
       setSelectedPoi(null);
-      setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: defaultMapCenter[0], lng: defaultMapCenter[1] });
+      const emptyForm = { name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 };
+      setFormData(emptyForm);
       setImagePreview("");
       setImageFile(null);
 
-      if (mode === "add" && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            setFormData((prev) => ({
-              ...prev,
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            }));
-          },
-          () => {
-            setFormData((prev) => ({
-              ...prev,
-              lat: defaultMapCenter[0],
-              lng: defaultMapCenter[1],
-            }));
-          },
-          { enableHighAccuracy: true, timeout: 8000, maximumAge: 300000 }
-        );
+      if (mode === "add") {
+        requestCurrentLocation();
+      } else {
+        setFormData({ ...emptyForm, lat: defaultMapCenter[0], lng: defaultMapCenter[1] });
+        setIsResolvingLocation(false);
       }
     }
     setIsModalOpen(true);
@@ -209,6 +254,9 @@ export default function POIManagement() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setMapInstance(null);
+    setIsResolvingLocation(false);
+    setLocationError("");
     setSelectedPoi(null);
     setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
     setImagePreview("");
@@ -235,6 +283,11 @@ export default function POIManagement() {
   const handleSave = async () => {
     if (!formData.name.trim()) {
       alert("Please enter POI name");
+      return;
+    }
+
+    if (!hasSelectedPosition) {
+      alert("Please select a valid location before saving.");
       return;
     }
 
@@ -715,36 +768,66 @@ export default function POIManagement() {
                 Location (click on map to choose)
               </label>
               <div className="rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800">
-                <MapContainer
-                  key={modalMode}
-                  center={selectedPosition}
-                  zoom={15}
-                  style={{ height: 260, width: "100%" }}
-                  scrollWheelZoom={modalMode !== "view"}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <PoiMiniMapSync
+                {modalMode === "add" && isResolvingLocation && !selectedPosition ? (
+                  <div className="h-[260px] flex items-center justify-center gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800">
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Detecting your current location...
+                  </div>
+                ) : selectedPosition ? (
+                  <MapContainer
+                    key={modalMode}
                     center={selectedPosition}
-                    editable={modalMode !== "view"}
-                    onPick={(lat, lng) => setFormData((prev) => ({ ...prev, lat, lng }))}
-                  />
-                  <CircleMarker
-                    center={selectedPosition}
-                    radius={10}
-                    pathOptions={{
-                      color: "#f97316",
-                      weight: 2,
-                      fillColor: "#fb923c",
-                      fillOpacity: 0.9,
+                    zoom={15}
+                    style={{ height: 260, width: "100%" }}
+                    scrollWheelZoom={modalMode !== "view"}
+                    whenReady={(event) => {
+                      const map = event.target;
+                      setMapInstance(map);
+                      map.invalidateSize();
+                      const targetZoom = Math.max(map.getZoom(), 15);
+                      map.setView(selectedPosition, targetZoom, { animate: false });
                     }}
-                  />
-                </MapContainer>
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <PoiMiniMapSync
+                      center={selectedPosition}
+                      editable={modalMode !== "view"}
+                      onPick={(lat, lng) => setFormData((prev) => ({ ...prev, lat, lng }))}
+                    />
+                    <CircleMarker
+                      center={selectedPosition}
+                      radius={10}
+                      pathOptions={{
+                        color: "#f97316",
+                        weight: 2,
+                        fillColor: "#fb923c",
+                        fillOpacity: 0.9,
+                      }}
+                    />
+                  </MapContainer>
+                ) : (
+                  <div className="h-[260px] flex flex-col items-center justify-center gap-3 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-4 text-center">
+                    <p>Current location is unavailable.</p>
+                    {modalMode === "add" && (
+                      <button
+                        type="button"
+                        onClick={requestCurrentLocation}
+                        className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                      >
+                        Retry current location
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
+              {locationError && (
+                <p className="text-xs text-red-500">{locationError}</p>
+              )}
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Selected: {selectedPosition[0].toFixed(6)}, {selectedPosition[1].toFixed(6)}
+                Selected: {selectedPosition ? `${selectedPosition[0].toFixed(6)}, ${selectedPosition[1].toFixed(6)}` : "--"}
               </p>
             </div>
 
@@ -755,7 +838,7 @@ export default function POIManagement() {
                 </label>
                 <input
                   type="text"
-                  value={selectedPosition[0].toFixed(6)}
+                  value={selectedPosition ? selectedPosition[0].toFixed(6) : "--"}
                   readOnly
                   className="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-900 border-none rounded-xl text-gray-700 dark:text-gray-300"
                 />
@@ -766,7 +849,7 @@ export default function POIManagement() {
                 </label>
                 <input
                   type="text"
-                  value={selectedPosition[1].toFixed(6)}
+                  value={selectedPosition ? selectedPosition[1].toFixed(6) : "--"}
                   readOnly
                   className="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-900 border-none rounded-xl text-gray-700 dark:text-gray-300"
                 />
