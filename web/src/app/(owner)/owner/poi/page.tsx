@@ -149,33 +149,31 @@ export default function POIManagement() {
       const response = await api.get(
         `/pois/owner/list?search=${searchQuery}&status=${statusFilter}&page=${currentPage}&limit=10`
       );
-      if (response.success) {
-        setPois(
-          response.data.data.map((poi: any) => ({
-            ...poi,
-            name: poi.translations?.[0]?.name || "Unnamed POI",
-            address: poi.translations?.[0]?.description || "",
-            specialties: poi.translations?.[0]?.specialties || "",
-            priceRange: poi.translations?.[0]?.priceRange || "",
-            description: poi.translations?.[0]?.description || "",
-            translations: poi.translations?.length
-              ? [
-                  {
-                    ...poi.translations[0],
-                    imageUrl: normalizePoiImageUrl(poi.translations[0]?.imageUrl),
-                    audioUrl: poi.translations[0]?.audioUrl,
-                  },
-                  ...poi.translations.slice(1),
-                ]
-              : poi.translations,
-          }))
-        );
-        setPagination({
-          total: response.data.pagination.total,
-          totalPages: response.data.pagination.totalPages,
-          limit: response.data.pagination.limit,
-        });
-      }
+      setPois(
+        response.data.data.map((poi: any) => ({
+          ...poi,
+          name: poi.translations?.[0]?.name || "Unnamed POI",
+          address: poi.translations?.[0]?.description || "",
+          specialties: poi.translations?.[0]?.specialties || "",
+          priceRange: poi.translations?.[0]?.priceRange || "",
+          description: poi.translations?.[0]?.description || "",
+          translations: poi.translations?.length
+            ? [
+                {
+                  ...poi.translations[0],
+                  imageUrl: normalizePoiImageUrl(poi.translations[0]?.imageUrl),
+                  audioUrl: poi.translations[0]?.audioUrl,
+                },
+                ...poi.translations.slice(1),
+              ]
+            : poi.translations,
+        }))
+      );
+      setPagination({
+        total: response.data.pagination.total,
+        totalPages: response.data.pagination.totalPages,
+        limit: response.data.pagination.limit,
+      });
     } catch (error) {
       console.error("Failed to fetch POIs:", error);
     } finally {
