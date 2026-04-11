@@ -230,7 +230,7 @@ export const createPOI = async (
   }
 
   try {
-    const poiName = poi?.translations?.[0]?.name || `POI ${poi.id.slice(0, 8)}`;
+    const poiName = poi.translations?.name || `POI ${poi.id.slice(0, 8)}`;
     await logAdminAction(
       adminId,
       'CREATE_POI',
@@ -386,7 +386,7 @@ export const deletePOI = async (
     include: { translations: true },
   });
   try {
-    const poiName = poi?.translations?.[0]?.name || `POI ${id.slice(0, 8)}`;
+    const poiName = poi?.translations?.name || `POI ${id.slice(0, 8)}`;
     await logAdminAction(adminId, 'SOFT_DELETE_POI', id, { name: poiName }, undefined, undefined, ipAddress, userAgent);
   } catch (e) { /* ignore */ }
   return {

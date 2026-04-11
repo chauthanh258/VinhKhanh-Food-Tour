@@ -73,11 +73,9 @@ export const findMenuItemsByOwnerWithFilters = async (
       {
         poi: {
           translations: {
-            some: {
-              name: {
-                contains: search.trim(),
-                mode: 'insensitive'
-              }
+            name: {
+              contains: search.trim(),
+              mode: 'insensitive'
             }
           }
         }

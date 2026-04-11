@@ -61,7 +61,6 @@ const PoiMiniMapSync = dynamic(() => import("./PoiMiniMapSync"), { ssr: false })
 interface POIItem {
   id: string;
   name: string;
-  address?: string;
   specialties?: string;
   priceRange?: string;
   lat: number;
@@ -93,7 +92,6 @@ export default function POIManagement() {
   const [selectedPoi, setSelectedPoi] = useState<POIItem | null>(null);
   const [formData, setFormData] = useState({
     name: "",
-    address: "",
     specialties: "",
     priceRange: "",
     description: "",
@@ -149,25 +147,26 @@ export default function POIManagement() {
       const response = await api.get(
         `/pois/owner/list?search=${searchQuery}&status=${statusFilter}&page=${currentPage}&limit=10`
       );
-      if (response.success) {
+      console.log(response);
+      if (response.status === 200) {
         setPois(
-          response.data.data.map((poi: any) => ({
+          response.data.data.map((poi: any) => (
+            console.log("poi", poi.translations),
+            {
             ...poi,
-            name: poi.translations?.[0]?.name || "Unnamed POI",
-            address: poi.translations?.[0]?.description || "",
-            specialties: poi.translations?.[0]?.specialties || "",
-            priceRange: poi.translations?.[0]?.priceRange || "",
-            description: poi.translations?.[0]?.description || "",
-            translations: poi.translations?.length
-              ? [
-                  {
-                    ...poi.translations[0],
-                    imageUrl: normalizePoiImageUrl(poi.translations[0]?.imageUrl),
-                    audioUrl: poi.translations[0]?.audioUrl,
-                  },
-                  ...poi.translations.slice(1),
-                ]
-              : poi.translations,
+            name: poi.translations?.name || "Unnamed POI",
+            specialties: poi.translations?.specialties || "",
+            priceRange: poi.translations?.priceRange || "",
+            description: poi.translations?.description || "",
+            translations: Array(poi.translations)?.map((t: any, index: number) =>
+                index === 0
+                  ? {
+                      ...t,
+                      imageUrl: normalizePoiImageUrl(t.imageUrl),
+                      audioUrl: t.audioUrl,
+                    }
+                  : t
+              ),
           }))
         );
         setPagination({
@@ -230,7 +229,6 @@ export default function POIManagement() {
       const normalizedImageUrl = normalizePoiImageUrl(poi.translations?.[0]?.imageUrl);
       setFormData({
         name: poi.name,
-        address: poi.address || "",
         specialties: poi.translations?.[0]?.specialties || "",
         priceRange: poi.translations?.[0]?.priceRange || "",
         description: poi.translations?.[0]?.description || "",
@@ -243,7 +241,7 @@ export default function POIManagement() {
       setAudioFile(null);
     } else {
       setSelectedPoi(null);
-      const emptyForm = { name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 };
+      const emptyForm = { name: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 };
       setFormData(emptyForm);
       setImagePreview("");
       setImageFile(null);
@@ -265,7 +263,7 @@ export default function POIManagement() {
     setIsResolvingLocation(false);
     setLocationError("");
     setSelectedPoi(null);
-    setFormData({ name: "", address: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
+    setFormData({ name: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
     setImagePreview("");
     setImageFile(null);
     setAudioFile(null);
@@ -434,11 +432,10 @@ export default function POIManagement() {
                     setCurrentPage(1);
                     setIsFilterMenuOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                    statusFilter === option.value
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${statusFilter === option.value
                       ? "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400"
                       : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }`}
+                    }`}
                 >
                   {option.label}
                 </button>
@@ -534,11 +531,10 @@ export default function POIManagement() {
                     <td className="px-6 py-5">
                       <button
                         onClick={() => toggleStatus(poi.id, poi.isActive)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                          poi.isActive
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${poi.isActive
                             ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-500 hover:bg-green-100"
                             : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                        }`}
+                          }`}
                       >
                         {poi.isActive ? (
                           <ToggleRight className="w-4 h-4" />
@@ -597,11 +593,10 @@ export default function POIManagement() {
               <button
                 key={i + 1}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`px-3 py-2 rounded-lg font-medium transition-colors ${
-                  currentPage === i + 1
+                className={`px-3 py-2 rounded-lg font-medium transition-colors ${currentPage === i + 1
                     ? "bg-orange-500 text-white"
                     : "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200"
-                }`}
+                  }`}
               >
                 {i + 1}
               </button>
