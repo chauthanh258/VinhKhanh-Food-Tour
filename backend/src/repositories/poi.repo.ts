@@ -89,31 +89,25 @@ export const findPOIsByOwnerWithFilters = async (
     whereConditions.OR = [
       {
         translations: {
-          some: {
-            name: {
-              contains: search.trim(),
-              mode: 'insensitive'
-            }
+          name: {
+            contains: search.trim(),
+            mode: 'insensitive'
           }
         }
       },
       {
         translations: {
-          some: {
-            description: {
-              contains: search.trim(),
-              mode: 'insensitive'
-            }
+          description: {
+            contains: search.trim(),
+            mode: 'insensitive'
           }
         }
       },
       {
         translations: {
-          some: {
-            specialties: {
-              contains: search.trim(),
-              mode: 'insensitive'
-            }
+          specialties: {
+            contains: search.trim(),
+            mode: 'insensitive'
           }
         }
       }

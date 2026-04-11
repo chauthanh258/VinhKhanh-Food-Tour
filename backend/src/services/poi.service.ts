@@ -102,7 +102,7 @@ export const uploadPOIMedia = async (
     throw new AppError(403, 'You do not have permission to update this POI');
   }
 
-  const translation = poi.translations?.[0];
+  const translation = poi.translations;
   if (!translation) {
     throw new AppError(404, 'POI translation not found');
   }
@@ -123,9 +123,9 @@ export const uploadPOIMedia = async (
       `poi-${poiId}-image-${Date.now()}`
     );
     nextData.imageUrl = uploadedImage.secure_url;
-    nextData.imagePublicId = uploadedImage.public_id;
-    if (translation.imagePublicId) {
-      cleanupTasks.push(destroyCloudinaryAsset(translation.imagePublicId, 'image'));
+    nextData.image_public_id = uploadedImage.public_id;
+    if (translation.image_public_id) {
+      cleanupTasks.push(destroyCloudinaryAsset(translation.image_public_id, 'image'));
     }
   }
 
@@ -135,9 +135,9 @@ export const uploadPOIMedia = async (
       `poi-${poiId}-audio-${Date.now()}`
     );
     nextData.audioUrl = uploadedAudio.secure_url;
-    nextData.audioPublicId = uploadedAudio.public_id;
-    if (translation.audioPublicId) {
-      cleanupTasks.push(destroyCloudinaryAsset(translation.audioPublicId, 'video'));
+    nextData.audio_public_id = uploadedAudio.public_id;
+    if (translation.audio_public_id) {
+      cleanupTasks.push(destroyCloudinaryAsset(translation.audio_public_id, 'video'));
     }
   }
 
