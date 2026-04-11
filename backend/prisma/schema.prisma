@@ -43,7 +43,7 @@ model POI {
   status          POIStatus       @default(APPROVED)
   submittedAt     DateTime?       @map("submitted_at")
   menuItems       MenuItem[]
-  translations    POITranslation[]
+  translations    POITranslation?
   category        Category?       @relation(fields: [categoryId], references: [id])
   owner           User?           @relation("OwnerPois", fields: [ownerId], references: [id])
 
@@ -58,7 +58,7 @@ model Category {
   deletedAt    DateTime?            @map("deleted_at")
   createdAt    DateTime             @default(now()) @map("created_at")
   updatedAt    DateTime             @default(now()) @updatedAt @map("updated_at")
-  translations CategoryTranslation[]
+  translations CategoryTranslation?
   pois         POI[]
 
   @@map("categories")
@@ -78,19 +78,19 @@ model CategoryTranslation {
 }
 
 model POITranslation {
-  id          String   @id @default(uuid()) @db.Uuid
-  poiId       String   @unique @map("poi_id") @db.Uuid
-  name        String   @db.VarChar(255)
-  description String?
-  specialties String?
-  priceRange  String?  @map("price_range") @db.VarChar(100)
-  audioUrl    String?  @map("audio_url") @db.VarChar(255)
-  audioPublicId String? @map("audio_public_id") @db.VarChar(255)
-  imageUrl    String?  @map("image_url") @db.VarChar(255)
-  imagePublicId String? @map("image_public_id") @db.VarChar(255)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
-  poi         POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
+  id              String   @id @default(uuid()) @db.Uuid
+  poiId           String   @unique @map("poi_id") @db.Uuid
+  name            String   @db.VarChar(255)
+  description     String?
+  specialties     String?
+  priceRange      String?  @map("price_range") @db.VarChar(100)
+  audioUrl        String?  @map("audio_url") @db.VarChar(255)
+  imageUrl        String?  @map("image_url") @db.VarChar(255)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  audio_public_id String?  @db.VarChar(255)
+  image_public_id String?  @db.VarChar(255)
+  poi             POI      @relation(fields: [poiId], references: [id], onDelete: Cascade)
 
   @@map("poi_translations")
 }
@@ -137,4 +137,29 @@ enum POIStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum ModerationType {
+  POI_CREATE
+  POI_DELETE
+  UPGRADE_OWNER
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ModerationRequest {
+  id          String           @id @default(uuid()) @db.Uuid
+  type        ModerationType
+  targetId    String           @map("target_id") @db.Uuid
+  requesterId String           @map("requester_id") @db.Uuid
+  status      ModerationStatus @default(PENDING)
+  requestedAt DateTime         @default(now()) @map("requested_at")
+  approvedAt  DateTime?        @map("approved_at")
+
+  @@unique([targetId, type])
+  @@map("moderation_requests")
 }

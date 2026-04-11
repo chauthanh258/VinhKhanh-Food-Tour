@@ -113,7 +113,17 @@ export const getAllPOIs = async (skip: number = 0, take: number = 20) => {
     }),
     prisma.pOI.count(),
   ]);
-  return { pois, total };
+  return { 
+    pois: pois.map(poi => ({
+      ...poi,
+      translations: poi.translations ? [poi.translations] : [],
+      category: poi.category ? {
+        ...poi.category,
+        translations: poi.category.translations ? [poi.category.translations] : []
+      } : poi.category
+    })), 
+    total 
+  };
 };
 
 export const getPendingRequests = async () => {
@@ -134,12 +144,21 @@ export const getPendingRequests = async () => {
     }),
   ]);
 
+  const mappedPois = pendingPOIs.map(poi => ({
+    ...poi,
+    translations: poi.translations ? [poi.translations] : [],
+    category: poi.category ? {
+      ...poi.category,
+      translations: poi.category.translations ? [poi.category.translations] : []
+    } : poi.category
+  }));
+
   return {
     pendingPOIs: pendingPOIs.length,
     pendingUsers: pendingUsers.length,
     totalPending: pendingPOIs.length + pendingUsers.length,
     details: {
-      pois: pendingPOIs,
+      pois: mappedPois,
       users: pendingUsers,
     },
   };
@@ -160,7 +179,15 @@ export const getPOIById = async (id: string) => {
     },
   });
   if (!poi) throw new AppError(404, 'POI not found');
-  return poi;
+  
+  return {
+    ...poi,
+    translations: poi.translations ? [poi.translations] : [],
+    category: poi.category ? {
+      ...poi.category,
+      translations: poi.category.translations ? [poi.category.translations] : []
+    } : poi.category
+  };
 };
 
 export const createPOI = async (
@@ -255,6 +282,9 @@ export const updatePOIAsAdmin = async (
       ...(ownerId !== undefined && { ownerId: ownerId || null }),
       ...(isActive !== undefined && { isActive }),
     },
+    include: {
+      translations: true,
+    },
   });
 
   if (translations && Array.isArray(translations) && translations.length > 0) {
@@ -294,13 +324,17 @@ export const updatePOIStatus = async (
   const poi = await prisma.pOI.update({
     where: { id },
     data: { isActive },
+    include: { translations: true },
   });
   const poiTranslation = await prisma.pOITranslation.findFirst({ where: { poiId: id } });
   const poiName = poiTranslation?.name || 'POI';
   try {
     await logAdminAction(adminId, 'UPDATE_POI_STATUS', id, { name: poiName, isActive }, undefined, undefined, ipAddress, userAgent);
   } catch (e) { /* ignore */ }
-  return poi;
+  return {
+    ...poi,
+    translations: poi.translations ? [poi.translations] : []
+  };
 };
 
 export const approvePOI = async (
@@ -325,6 +359,7 @@ export const approvePOI = async (
       status,
       isActive: status === 'APPROVED',
     },
+    include: { translations: true },
   });
 
   const newValue = { status: updatedPoi.status, isActive: updatedPoi.isActive };
@@ -348,12 +383,16 @@ export const deletePOI = async (
   const poiUpdate = await prisma.pOI.update({
     where: { id },
     data: { deletedAt: new Date(), isActive: false },
+    include: { translations: true },
   });
   try {
     const poiName = poi?.translations?.[0]?.name || `POI ${id.slice(0, 8)}`;
     await logAdminAction(adminId, 'SOFT_DELETE_POI', id, { name: poiName }, undefined, undefined, ipAddress, userAgent);
   } catch (e) { /* ignore */ }
-  return poiUpdate;
+  return {
+    ...poiUpdate,
+    translations: poiUpdate.translations ? [poiUpdate.translations] : []
+  };
 };
 
 // System Stats

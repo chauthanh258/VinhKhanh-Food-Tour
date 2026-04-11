@@ -51,7 +51,7 @@ router.get('/categories', authenticate, categoryController.getAllCategories);
  *       404:
  *         description: Category not found
  */
-router.get('/categories/:id', authenticate, authorize(['ADMIN']), categoryController.getCategoryById);
+router.get('/categories/:id', authenticate, authorize(['ADMIN', 'OWNER']), categoryController.getCategoryById);
 
 /**
  * @swagger

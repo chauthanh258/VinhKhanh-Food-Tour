@@ -16,7 +16,7 @@ export function RoleSwitcher() {
   const roles = [
     { value: "USER", label: "User Portal", icon: "👤", path: "/tour" },
     { value: "OWNER", label: "Owner Dashboard", icon: "🏪", path: "/owner" },
-    { value: "ADMIN", label: "Admin Panel", icon: "⚙️", path: "/dashboard" },
+    { value: "ADMIN", label: "Admin Panel", icon: "⚙️", path: "/admin" },
   ];
 
   const userRoles = user.role === "ADMIN" ? ["ADMIN", "OWNER", "USER"] : [user.role];

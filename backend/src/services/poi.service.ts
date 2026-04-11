@@ -1,6 +1,7 @@
 import * as poiRepo from '../repositories/poi.repo';
 import * as translationRepo from '../repositories/translation.repo';
 import * as auditService from './audit.service';
+import * as moderationService from './moderation.service';
 import { AppError } from '../middlewares/error.middleware';
 import { dbLangToGoogleTts, normalizeUiLangToDbLang } from '../utils/language.util';
 import { synthesizeTextToMp3Buffer } from './tts.service';
@@ -14,7 +15,7 @@ const translationCache = new Map<string, CachedTranslationTts>();
 
 export const createNewPOI = async (ownerId: string, data: any) => {
   const { lat, lng, categoryId, translations } = data;
-  
+
   const poi = await poiRepo.createPOI({
     lat,
     lng,
@@ -33,7 +34,18 @@ export const createNewPOI = async (ownerId: string, data: any) => {
     });
   }
 
-  return poiRepo.findPOIById(poi.id);
+  // Tạo yêu cầu duyệt
+  await moderationService.createRequest({
+    type: 'POI_CREATE',
+    targetId: poi.id,
+    requesterId: ownerId,
+  });
+
+  const poiResult = await poiRepo.findPOIById(poi.id);
+  return {
+    ...poiResult,
+    translations: poiResult?.translations ? [poiResult.translations] : []
+  };
 };
 
 export const getPOIDetails = async (id: string) => {
@@ -41,7 +53,10 @@ export const getPOIDetails = async (id: string) => {
   if (!poi) {
     throw new AppError(404, 'POI not found');
   }
-  return poi;
+  return {
+    ...poi,
+    translations: poi.translations ? [poi.translations] : []
+  };
 };
 
 export const updatePOIAsOwner = async (poiId: string, userId: string, userRole: string, data: any) => {
@@ -64,7 +79,11 @@ export const updatePOIAsOwner = async (poiId: string, userId: string, userRole: 
     await translationRepo.upsertTranslation(poiId, transData);
   }
 
-  return poiRepo.findPOIById(poiId);
+  const poiResult = await poiRepo.findPOIById(poiId);
+  return {
+    ...poiResult,
+    translations: poiResult?.translations ? [poiResult.translations] : []
+  };
 };
 
 export const uploadPOIMedia = async (
@@ -157,18 +176,17 @@ export const requestDeletePOI = async (poiId: string, userId: string, userRole: 
     throw new AppError(400, 'Admin should use direct delete instead of request');
   }
 
-  // Log the deletion request in audit logs
-  const poiTranslation = await translationRepo.findTranslationByPOIId(poiId);
-  const poiName = poiTranslation?.name || 'POI';
-
-  // For now, we'll use audit logs to track deletion requests
-  // In future, this could be moved to a dedicated requests table
-  await auditService.logAdminAction(userId, 'REQUEST_DELETE_POI', poiId, {
-    name: poiName,
-    reason: 'Owner requested deletion'
+  // Tạo yêu cầu duyệt xóa
+  await moderationService.createRequest({
+    type: 'POI_DELETE',
+    targetId: poiId,
+    requesterId: userId,
   });
 
-  return poi;
+  return {
+    ...poi,
+    translations: poi.translations ? [poi.translations] : []
+  };
 };
 
 export const listNearbyPOIs = async (lat: number, lng: number, radius: number, _lang: string) => {
@@ -177,22 +195,24 @@ export const listNearbyPOIs = async (lat: number, lng: number, radius: number, _
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3;
-    const φ1 = lat1 * Math.PI/180;
-    const φ2 = lat2 * Math.PI/180;
-    const Δφ = (lat2-lat1) * Math.PI/180;
-    const Δλ = (lon2-lon1) * Math.PI/180;
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c; 
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   };
 
   return allPois
-    .map((poi: ListedPoi) => {
+    .map((poi: any) => {
       const distance = getDistance(lat, lng, poi.lat, poi.lng);
       // We return the default Vietnamese translation
-      const translation = poi.translations?.[0];
+      const translations = poi.translations ? [poi.translations] : [];
+      const translation = translations[0];
       return {
         ...poi,
+        translations,
         distance: Math.round(distance),
         translation,
       };
@@ -216,9 +236,10 @@ export const getTranslatedDescriptionAndTts = async (poiId: string, uiLang: stri
   if (!poi) {
     throw new AppError(404, 'POI not found');
   }
-  const defaultTranslation = poi.translations?.[0];
+  const translations = poi.translations ? [poi.translations] : [];
+  const defaultTranslation = translations[0];
   let text = defaultTranslation?.description?.trim();
-  
+
   if (!defaultTranslation || !text) {
     throw new AppError(404, 'No description available for TTS');
   }
@@ -244,7 +265,7 @@ export const getTranslatedDescriptionAndTts = async (poiId: string, uiLang: stri
   const googleLang = dbLangToGoogleTts(dbLang);
   const buffer = await synthesizeTextToMp3Buffer(text, googleLang);
   const audioBase64 = buffer.toString('base64');
-  
+
   const result = {
     text,
     audioBase64: `data:audio/mpeg;base64,${audioBase64}`,

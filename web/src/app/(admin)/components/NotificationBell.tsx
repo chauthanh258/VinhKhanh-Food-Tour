@@ -1,45 +1,61 @@
-﻿'use client';
+'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { adminApi } from '@/lib/api/admin';
 import Link from 'next/link';
 
 const NotificationBell = () => {
   const [pendingCount, setPendingCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const prevCountRef = useRef(0);
 
   const fetchPending = async () => {
-    setLoading(true);
     try {
       const result = await adminApi.getPendingRequests();
-      const payload = (result as any).data ?? result;
-      const total = payload.totalPending ?? ((payload.details?.pois?.length ?? 0) + (payload.details?.users?.length ?? 0));
-      setPendingCount(total);
-      setError(null);
+      const count = Array.isArray(result) ? result.length : 0;
+      
+      if (count > prevCountRef.current) {
+        playDing();
+      }
+      
+      setPendingCount(count);
+      prevCountRef.current = count;
     } catch (err: any) {
-      setPendingCount(0);
-      setError(err.message || 'Không thể tải yêu cầu');
-    } finally {
-      setLoading(false);
+      // Thầm lặng thất bại để không làm phiền người dùng
+    }
+  };
+
+  const playDing = () => {
+    try {
+      // Sử dụng âm thanh ding ngắn từ Mixkit (miễn phí)
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      audio.volume = 0.4;
+      audio.play().catch(e => console.warn('Audio auto-play blocked by browser. User interaction required first.'));
+    } catch (e) {
+      console.warn('Audio failed:', e);
     }
   };
 
   useEffect(() => {
     fetchPending();
-    const interval = setInterval(fetchPending, 10000);
+    const interval = setInterval(fetchPending, 30000);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="relative">
       <Link href="/admin/approvals">
-        <button className="relative p-2 rounded-lg hover:bg-muted/30 transition-colors">
-          <Bell size={20} />
+        <button className="relative p-2.5 rounded-xl hover:bg-primary/10 transition-all duration-300 group focus:outline-none">
+          <Bell 
+            size={22} 
+            className={`transition-all duration-500 ${pendingCount > 0 ? 'text-primary animate-pulse' : 'text-muted-foreground group-hover:text-foreground'}`} 
+          />
           {pendingCount > 0 && (
-            <span className="absolute top-1 right-1 w-5 h-5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-              {pendingCount}
+            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-5 w-5 bg-primary text-primary-foreground text-[10px] font-black items-center justify-center shadow-lg border-2 border-background">
+                {pendingCount > 10 ? '10+' : pendingCount}
+              </span>
             </span>
           )}
         </button>
