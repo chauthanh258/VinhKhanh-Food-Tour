@@ -73,7 +73,7 @@ export const getOwnerAnalytics = async (ownerId: string) => {
 
   ownerMenuItems.forEach((item) => {
     const poi = ownerPois.find((p) => p.id === item.poiId);
-    const name = poi?.translations?.[0]?.name || 'Unnamed POI';
+    const name = poi?.translations?.name || 'Unnamed POI';
     const existing = distributionMap.get(item.poiId);
     if (existing) {
       existing.value += 1;
@@ -187,7 +187,7 @@ export const getOwnerDashboard = async (ownerId: string) => {
     ...latestPois.map((poi) => ({
       id: `poi-${poi.id}`,
       type: 'poi',
-      message: `Added POI: ${poi.translations?.[0]?.name || 'Unnamed POI'}`,
+      message: `Added POI: ${poi.translations?.name || 'Unnamed POI'}`,
       timestamp: poi.createdAt,
     })),
     ...latestMenuItems.map((item) => ({

@@ -71,7 +71,7 @@ export const createCategory = async (
     data: {
       isActive: data.isActive ?? true,
       translations: {
-        create: data.translations,
+        create: data.translations[0],
       },
     },
     include: {
@@ -111,29 +111,27 @@ export const updateCategory = async (
     updateData.isActive = data.isActive;
   }
 
-  if (data.translations) {
-    for (const translation of data.translations) {
-      const transObj = existingCategory.translations;
-      const existingTranslation = transObj && (transObj as any).language === translation.language ? transObj : null;
+  if (data.translations && data.translations.length > 0) {
+    const translation = data.translations[0];
+    const existingTranslation = existingCategory.translations;
 
-      if (existingTranslation) {
-        await prisma.categoryTranslation.update({
-          where: { id: (existingTranslation as any).id },
-          data: {
-            name: translation.name,
-            description: translation.description,
-          },
-        });
-      } else {
-        await prisma.categoryTranslation.create({
-          data: {
-            categoryId,
-            name: translation.name,
-            description: translation.description,
-            language: translation.language,
-          },
-        });
-      }
+    if (existingTranslation) {
+      await prisma.categoryTranslation.update({
+        where: { id: existingTranslation.id },
+        data: {
+          name: translation.name,
+          description: translation.description,
+        },
+      });
+    } else {
+      await prisma.categoryTranslation.create({
+        data: {
+          categoryId,
+          name: translation.name,
+          description: translation.description,
+          language: translation.language,
+        },
+      });
     }
   }
 
