@@ -6,6 +6,10 @@ import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import { useTranslation } from "@/i18n";
+import { api } from "@/lib/api";
+import { authApi } from "@/lib/api/auth";
+import { moderationApi } from "@/lib/api/moderation";
+import { useToast } from "@/components/Toast";
 
 const languages = [
   { id: "en", name: "English", flag: "🇬🇧", label: "English" },
@@ -27,6 +31,7 @@ const languages = [
 
 export default function SettingsPage() {
   const { user, language, setLanguage, updateUser, logout } = useUserStore();
+  const { addToast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedRadius, setSelectedRadius] = useState("100m");
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -42,17 +47,9 @@ export default function SettingsPage() {
 
     setIsUpdating(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/profile`, {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Cookies.get('auth-token')}`
-        },
-        body: JSON.stringify({ language: langId }),
-      });
-      const result = await response.json();
+      const result = await api.patch('/auth/profile', { language: langId });
       
-      if (result.success) {
+      if (result.data) {
         updateUser({ language: langId });
       } else {
         console.error("Failed to update language on backend");
@@ -69,6 +66,42 @@ export default function SettingsPage() {
     logout();
     router.push("/login");
   };
+
+  // const handleUpdateProfile = async () => {
+  //   if (!user) return;
+
+  //   setIsUpdating(true);
+  //   try {
+  //     const result = await api.patch('/auth/profile', profileForm);
+      
+  //     if (result.data) {
+  //       updateUser(profileForm);
+  //       setIsEditingProfile(false);
+  //     } else {
+  //       console.error("Failed to update profile on backend");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error updating profile:", error);
+  //   } finally {
+  //     setIsUpdating(false);
+  //   }
+  // };
+
+  // const handleRequestOwnerUpgrade = async () => {
+  //   if (!user || user.role !== 'USER') return;
+
+  //   setIsRequestingUpgrade(true);
+  //   try {
+  //     await moderationApi.requestUpgrade();
+  //     addToast('Yêu cầu nâng cấp lên Owner đã được gửi. Admin sẽ xem xét trong thời gian sớm nhất.', 'success');
+  //   } catch (error: any) {
+  //     console.error('Failed to request owner upgrade:', error);
+  //     const message = error?.response?.data?.message || 'Không thể gửi yêu cầu nâng cấp';
+  //     addToast(message, 'error');
+  //   } finally {
+  //     setIsRequestingUpgrade(false);
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
@@ -102,7 +135,7 @@ export default function SettingsPage() {
               <div className="text-emerald-400 text-xl">›</div>
             </button>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5">
+            {/* <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-5">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
                   <Globe className="w-5 h-5 text-emerald-400" />
@@ -125,7 +158,7 @@ export default function SettingsPage() {
                   </button>
                 ))}
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -167,7 +200,7 @@ export default function SettingsPage() {
         </div>
 
         {/* PARTNERSHIP Section */}
-        <div>
+        {user?.role === 'USER' && (<div>
           <h3 className="text-zinc-500 text-xs font-semibold uppercase tracking-widest px-2 mb-4">{t.settings.sectionPartnership}</h3>
           
           <div className="space-y-3">
@@ -187,7 +220,7 @@ export default function SettingsPage() {
               <div className="text-orange-400 text-xl group-hover:translate-x-1 transition-transform">›</div>
             </button>
           </div>
-        </div>
+        </div>)}
 
         {/* Log Out */}
         <button 

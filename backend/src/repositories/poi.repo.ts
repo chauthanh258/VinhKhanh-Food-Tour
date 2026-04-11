@@ -46,10 +46,19 @@ export const findAllPOIs = async (filters: any = {}) => {
 
 export const findPOIsByOwner = async (ownerId: string) => {
   return prisma.pOI.findMany({
-    where: { ownerId },
+    where: { 
+      ownerId,
+      deletedAt: null
+    },
     include: {
-      translations: true
-    }
+      translations: true,
+      category: {
+        include: {
+          translations: true
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
   });
 };
 

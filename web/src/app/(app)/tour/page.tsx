@@ -2,7 +2,8 @@
 
 import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Navigation, MousePointer2, Volume2, ChevronUp } from 'lucide-react';
+import { Navigation, MousePointer2 } from 'lucide-react';
+import { Volume2, VolumeX, ChevronDown, MapPin, Star, DollarSign, Utensils, Play, Pause, SkipForward, ChevronUp, X, LogOut } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 import PlaceList from '@/app/(app)/tour/components/PlaceList';
@@ -15,33 +16,6 @@ const TourMap = dynamic(() => import('@/app/(app)/tour/components/TourMap'), {
   ssr: false,
   loading: () => <div className="w-full h-full bg-zinc-900 animate-pulse flex items-center justify-center text-zinc-500 font-medium">Đang tải bản đồ...</div>
 });
-
-// ─── Mini Reopen Button ──────────────────────────────────────────────────────
-function ReopenButton({ poi, onClick }: { poi: POI; onClick: () => void }) {
-  return (
-    <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      <button
-        onClick={onClick}
-        className="flex items-center gap-3 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-full pl-2 pr-5 py-2 shadow-2xl active:scale-95 transition-all"
-      >
-        <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-orange-500/40">
-          {poi.translation.imageUrl ? (
-            <img src={poi.translation.imageUrl} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-              <Volume2 className="w-4 h-4 text-orange-500" />
-            </div>
-          )}
-        </div>
-        <div className="text-left">
-          <p className="text-[10px] text-orange-500 font-bold uppercase tracking-wider">Đang thuyết minh</p>
-          <p className="text-xs text-white font-semibold max-w-[140px] truncate">{poi.translation.name}</p>
-        </div>
-        <ChevronUp className="w-4 h-4 text-zinc-400 ml-1" />
-      </button>
-    </div>
-  );
-}
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 function TourPageContent() {
@@ -66,7 +40,7 @@ function TourPageContent() {
   const fetchPois = useCallback(async (lat: number, lng: number) => {
     try {
       const res = await fetch(
-        `${API_BASE}/pois?lat=${lat}&lng=${lng}&radius=1500&lang=${encodeURIComponent(language)}`
+        `${API_BASE}/pois?lat=${lat}&lng=${lng}&radius=500&lang=${encodeURIComponent(language)}`
       );
       const data = await res.json();
       if (data.success) setPois(data.data);

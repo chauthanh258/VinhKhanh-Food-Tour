@@ -80,8 +80,8 @@ export default function TourMap({ userPos, pois, onTriggerAudio, onMapClick }: T
 
   useEffect(() => {
     if (userPos && pois.length > 0) {
-      // Find the first POI within 50m range
-      const nearbyPoi = pois.find(p => p.distance <= 50);
+      // Find the first POI within 25m range
+      const nearbyPoi = pois.find(p => p.distance <= 25);
 
       if (nearbyPoi) {
         if (nearbyPoi.id !== lastTriggeredIdRef.current) {
@@ -90,7 +90,7 @@ export default function TourMap({ userPos, pois, onTriggerAudio, onMapClick }: T
           onTriggerAudio(nearbyPoi);
         }
       } else {
-        // When completely out of range of any 50m POI, reset session-level consecutive trigger
+        // When completely out of range of any 25m POI, reset session-level consecutive trigger
         // This allows re-triggering the same POI if they leave and come back, 
         // regardless of whether they hit other POIs in between.
         lastTriggeredIdRef.current = null;
@@ -122,13 +122,13 @@ export default function TourMap({ userPos, pois, onTriggerAudio, onMapClick }: T
             </Marker>
             <Circle 
                 center={userPos} 
-                radius={50} 
+                radius={25} 
                 pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.1 }} 
             />
-            {/* POI Loading Range Circle (1500m) */}
+            {/* POI Loading Range Circle (500m) */}
             <Circle 
                 center={userPos} 
-                radius={1500} 
+                radius={500} 
                 pathOptions={{ 
                   color: '#f97316', 
                   fillColor: '#f97316', 

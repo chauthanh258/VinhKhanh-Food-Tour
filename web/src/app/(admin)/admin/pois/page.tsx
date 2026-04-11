@@ -44,6 +44,7 @@ const POIManager = () => {
     fetchUsers({ skip: 0, take: 100 });
   }, []);
 
+  console.log(pois);
   const ownerOptions = users
     .filter((user) => user.role === 'OWNER')
     .map((owner) => ({ label: owner.fullName || owner.email, value: owner.id }));
@@ -99,11 +100,6 @@ const POIManager = () => {
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
       addToast('Vui lòng nhập tên POI', 'error');
-      return;
-    }
-
-    if (formData.priceRange.trim() && !/^[0-9]+$/.test(formData.priceRange.trim())) {
-      addToast('Khoảng giá chỉ được ghi số', 'error');
       return;
     }
 
@@ -303,7 +299,7 @@ const POIManager = () => {
               <Input
                 type="text"
                 value={formData.priceRange}
-                onChange={(e) => setFormData({ ...formData, priceRange: e.target.value.replace(/[^0-9]/g, '') })}
+                onChange={(e) => setFormData({ ...formData, priceRange: e.target.value })}
                 placeholder="Nhập khoảng giá (chỉ số)"
               />
             </div>

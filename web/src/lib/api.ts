@@ -1,17 +1,7 @@
 import Cookies from 'js-cookie';
 
+// Match the backend port 3001 as defined in server.ts
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-
-const parseResponseBody = async (response: Response) => {
-  const contentType = response.headers.get('content-type') || '';
-
-  if (contentType.includes('application/json')) {
-    return response.json();
-  }
-
-  const text = await response.text();
-  return { message: text };
-};
 
 async function fetcher(endpoint: string, options: RequestInit = {}) {
   const token = Cookies.get('auth-token');
@@ -29,19 +19,42 @@ async function fetcher(endpoint: string, options: RequestInit = {}) {
     headers,
   });
 
-  const data = await parseResponseBody(response);
+  // Handle potential non-JSON responses (security/errors)
+  const contentType = response.headers.get("content-type");
+  let json;
+  if (contentType && contentType.includes("application/json")) {
+    json = await response.json();
+  } else {
+    json = { message: await response.text() };
+  }
 
   if (!response.ok) {
     if (response.status === 401) {
       Cookies.remove('auth-token');
       Cookies.remove('user-role');
-      window.location.href = '/login';
+      // Only redirect if in browser
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
       throw new Error('Phiên đăng nhập hết hạn');
     }
-    throw new Error(data.message || data.error || `Request failed: ${response.status}`);
+    throw new Error(json.message || json.error || `Error ${response.status}: ${response.statusText}`);
   }
 
-  return data;
+  /**
+   * UNWRAP LOGIC:
+   * The backend returns { success: true, message: "...", data: PAYLOAD }
+   * We want response.data to be the PAYLOAD to match UI expectations.
+   */
+  const actualData = (json.success && json.data !== undefined) ? json.data : json;
+
+  // Return data wrapped in an object for Axios compatibility
+  return { 
+    data: actualData, 
+    status: response.status,
+    headers: response.headers,
+    fullResponse: json // Keep the full response just in case
+  };
 }
 
 export const api = {

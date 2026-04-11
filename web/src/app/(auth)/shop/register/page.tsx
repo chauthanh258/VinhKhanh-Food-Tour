@@ -1,12 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronLeft, User, MapPin, Store, Camera, ChevronRight, CheckCircle2, Info } from "lucide-react";
+import { ChevronLeft, User, MapPin, Store, Camera, ChevronRight, CheckCircle2, Info, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { moderationApi } from "@/lib/api/moderation";
+import { useToast } from "@/components/Toast";
 
 export default function RegisterShopPage() {
   const router = useRouter();
+  const { addToast } = useToast();
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
@@ -19,9 +23,22 @@ export default function RegisterShopPage() {
     idBack: null as string | null,
   });
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (step === 3) {
-      setStep(4);
+      if (isSubmitting) return;
+      
+      setIsSubmitting(true);
+      try {
+        await moderationApi.requestUpgrade();
+        setStep(4);
+        addToast('Gửi yêu cầu nâng cấp thành công', 'success');
+      } catch (error: any) {
+        console.error('Failed to request upgrade:', error);
+        const message = error?.response?.data?.message || 'Không thể gửi yêu cầu nâng cấp';
+        addToast(message, 'error');
+      } finally {
+        setIsSubmitting(false);
+      }
       return;
     }
     setStep((s) => s + 1);
@@ -264,11 +281,20 @@ export default function RegisterShopPage() {
         <div className="fixed bottom-0 left-0 right-0 p-6 bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-900 max-w-lg mx-auto z-10">
           <button 
             onClick={nextStep}
-            disabled={step === 3 && (!formData.idFront || !formData.idBack)}
+            disabled={isSubmitting || (step === 3 && (!formData.idFront || !formData.idBack))}
             className="w-full h-16 bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-800 disabled:text-zinc-600 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 text-lg shadow-xl shadow-orange-500/30"
           >
-            {step === 3 ? "Gửi yêu cầu duyệt" : "Tiếp theo"}
-            {step < 3 && <ChevronRight className="w-5 h-5 ml-1" />}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Đang gửi...
+              </>
+            ) : (
+              <>
+                {step === 3 ? "Gửi yêu cầu duyệt" : "Tiếp theo"}
+                {step < 3 && <ChevronRight className="w-5 h-5 ml-1" />}
+              </>
+            )}
           </button>
         </div>
       )}
