@@ -22,10 +22,10 @@ interface PoiItem {
   id: string;
   lat: number;
   lng: number;
-  translations?: Array<{
+  translations?: {
     name: string;
     imageUrl?: string | null;
-  }>;
+  };
 }
 
 const QR_SIZE = 260;
@@ -68,8 +68,8 @@ export default function QRCodePage() {
   const filteredPois = useMemo(() => {
     const keyword = searchQuery.trim().toLowerCase();
     return pois.filter((poi) => {
-      const name = poi.translations?.[0]?.name || "Unnamed POI";
-      const imageUrl = poi.translations?.[0]?.imageUrl;
+      const name = poi.translations?.name || "Unnamed POI";
+      const imageUrl = poi.translations?.imageUrl;
       const matchesSearch = !keyword || name.toLowerCase().includes(keyword);
       const matchesImageFilter = !onlyWithImage || Boolean(imageUrl);
       return matchesSearch && matchesImageFilter;
@@ -86,7 +86,7 @@ export default function QRCodePage() {
 
   const selectedPoi = filteredPois.find((poi) => poi.id === selectedPoiId) || filteredPois[0] || null;
 
-  const restaurantName = selectedPoi?.translations?.[0]?.name || "Select a restaurant";
+  const restaurantName = selectedPoi?.translations?.name || "Select a restaurant";
   const directLink = selectedPoi && siteOrigin ? `${siteOrigin}/poi/${selectedPoi.id}` : "";
   const qrImageUrl = selectedPoi
     ? `https://api.qrserver.com/v1/create-qr-code/?size=${QR_SIZE}x${QR_SIZE}&data=${encodeURIComponent(directLink)}`
@@ -260,8 +260,8 @@ export default function QRCodePage() {
           ) : (
             <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
               {filteredPois.map((poi) => {
-                const poiName = poi.translations?.[0]?.name || "Unnamed POI";
-                const imageUrl = poi.translations?.[0]?.imageUrl;
+                const poiName = poi.translations?.name || "Unnamed POI";
+                const imageUrl = poi.translations?.imageUrl;
                 return (
                   <button
                     key={poi.id}

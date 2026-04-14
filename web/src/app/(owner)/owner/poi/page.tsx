@@ -28,7 +28,7 @@ const ASSET_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:500
   ""
 );
 
-function normalizePoiImageUrl(url?: string) {
+function normalizePoiImageUrl(url?: string | null) {
   if (!url) return "";
   const trimmed = url.trim();
   if (!trimmed) return "";
@@ -72,8 +72,8 @@ interface POIItem {
     description?: string;
     specialties?: string;
     priceRange?: string;
-    imageUrl?: string;
-    audioUrl?: string;
+    imageUrl?: string | null;
+    audioUrl?: string | null;
   }>;
 }
 
@@ -90,12 +90,22 @@ export default function POIManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view" | "delete">("add");
   const [selectedPoi, setSelectedPoi] = useState<POIItem | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    specialties: string;
+    priceRange: string;
+    description: string;
+    imageUrl: string | null;
+    audioUrl: string | null;
+    lat: number;
+    lng: number;
+  }>({
     name: "",
     specialties: "",
     priceRange: "",
     description: "",
     imageUrl: "",
+    audioUrl: "",
     lat: 0,
     lng: 0,
   });
@@ -147,11 +157,10 @@ export default function POIManagement() {
       const response = await api.get(
         `/pois/owner/list?search=${searchQuery}&status=${statusFilter}&page=${currentPage}&limit=10`
       );
-      console.log(response);
       if (response.status === 200) {
         setPois(
           response.data.data.map((poi: any) => (
-            console.log("poi", poi.translations),
+            console.log(poi),
             {
             ...poi,
             name: poi.translations?.name || "Unnamed POI",
@@ -162,8 +171,8 @@ export default function POIManagement() {
                 index === 0
                   ? {
                       ...t,
-                      imageUrl: normalizePoiImageUrl(t.imageUrl),
-                      audioUrl: t.audioUrl,
+                      imageUrl: t?.imageUrl ? normalizePoiImageUrl(t.imageUrl) : "",
+                      audioUrl: t?.audioUrl || "",
                     }
                   : t
               ),
@@ -233,6 +242,7 @@ export default function POIManagement() {
         priceRange: poi.translations?.[0]?.priceRange || "",
         description: poi.translations?.[0]?.description || "",
         imageUrl: normalizedImageUrl,
+        audioUrl: poi.translations?.[0]?.audioUrl || "",
         lat: poi.lat,
         lng: poi.lng,
       });
@@ -241,7 +251,7 @@ export default function POIManagement() {
       setAudioFile(null);
     } else {
       setSelectedPoi(null);
-      const emptyForm = { name: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 };
+      const emptyForm = { name: "", specialties: "", priceRange: "", description: "", imageUrl: "", audioUrl: "", lat: 0, lng: 0 };
       setFormData(emptyForm);
       setImagePreview("");
       setImageFile(null);
@@ -263,18 +273,23 @@ export default function POIManagement() {
     setIsResolvingLocation(false);
     setLocationError("");
     setSelectedPoi(null);
-    setFormData({ name: "", specialties: "", priceRange: "", description: "", imageUrl: "", lat: 0, lng: 0 });
+    setFormData({ name: "", specialties: "", priceRange: "", description: "", imageUrl: "", audioUrl: "", lat: 0, lng: 0 });
     setImagePreview("");
     setImageFile(null);
     setAudioFile(null);
   };
 
-  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+        setFormData(prev => ({ ...prev, imageUrl: "" })); // Reset null state if file picked
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const clearImage = () => {
@@ -283,6 +298,14 @@ export default function POIManagement() {
     setFormData((prev) => ({ ...prev, imageUrl: "" }));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const clearAudio = () => {
+    setAudioFile(null);
+    setFormData((prev) => ({ ...prev, audioUrl: "" }));
+    if (audioInputRef.current) {
+      audioInputRef.current.value = "";
     }
   };
 
@@ -299,7 +322,8 @@ export default function POIManagement() {
 
     try {
       setIsSubmitting(true);
-      const imageUrl = formData.imageUrl.trim() || undefined;
+      const imageUrl = formData.imageUrl === null ? null : (formData.imageUrl?.trim() || undefined);
+      const audioUrl = formData.audioUrl === null ? null : (formData.audioUrl?.trim() || undefined);
 
       const payload = {
         lat: Number(formData.lat),
@@ -311,6 +335,7 @@ export default function POIManagement() {
             specialties: formData.specialties,
             priceRange: formData.priceRange.trim() || undefined,
             imageUrl,
+            audioUrl,
             language: "vi",
           },
         ],
@@ -348,7 +373,7 @@ export default function POIManagement() {
 
     try {
       setIsSubmitting(true);
-      await api.delete(`/pois/${selectedPoi.id}`);
+      await api.post(`/pois/${selectedPoi.id}/request-delete`, {});
       handleCloseModal();
       fetchPOIs();
     } catch (error) {
@@ -846,14 +871,29 @@ export default function POIManagement() {
                   POI Image
                 </label>
                 <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-800/40 space-y-3">
-                  <div className="h-40 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                  <div className="relative h-40 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-900 flex items-center justify-center group">
                     {(imagePreview || formData.imageUrl) ? (
-                      <img
-                        src={imagePreview || formData.imageUrl}
-                        alt="POI preview"
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
+                      <>
+                        <img
+                          src={imagePreview || (formData.imageUrl as string)}
+                          alt="POI preview"
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        {modalMode !== "view" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImagePreview("");
+                              setImageFile(null);
+                              setFormData(prev => ({ ...prev, imageUrl: null }));
+                            }}
+                            className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <span className="text-sm text-gray-400">No image selected</span>
                     )}
@@ -882,11 +922,23 @@ export default function POIManagement() {
                   Narration Audio
                 </label>
                 <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 p-4 bg-gray-50/60 dark:bg-gray-800/40 space-y-3">
-                  <div className="h-40 rounded-xl bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-center px-4">
+                  <div className="relative h-40 rounded-xl bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-center px-4 group">
                     <div>
                       <p className="font-semibold text-gray-700 dark:text-gray-200 break-all line-clamp-2">
-                        {audioFile ? audioFile.name : selectedPoi?.translations?.[0]?.audioUrl ? "Audio narration uploaded" : "No audio selected"}
+                        {audioFile ? audioFile.name : (formData.audioUrl ? "Audio narration uploaded" : "No audio selected")}
                       </p>
+                      {modalMode !== "view" && (audioFile || formData.audioUrl) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAudioFile(null);
+                            setFormData(prev => ({ ...prev, audioUrl: null }));
+                          }}
+                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Upload an MP3, WAV, or M4A narration file.
                       </p>
@@ -906,7 +958,7 @@ export default function POIManagement() {
                     disabled={modalMode === "view"}
                     className="w-full py-2 px-4 bg-orange-500 text-white rounded-xl font-bold text-sm hover:bg-orange-600 transition-colors disabled:opacity-60"
                   >
-                    {audioFile || selectedPoi?.translations?.[0]?.audioUrl ? "Change Audio" : "Choose Audio"}
+                    {audioFile || formData.audioUrl ? "Change Audio" : "Choose Audio"}
                   </button>
                 </div>
               </div>

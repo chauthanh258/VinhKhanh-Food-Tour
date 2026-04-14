@@ -76,6 +76,20 @@ export const updatePOIAsOwner = async (poiId: string, userId: string, userRole: 
 
   if (translations && Array.isArray(translations) && translations.length > 0) {
     const { language, ...transData } = translations[0];
+
+    // Media cleanup if explicitly set to null
+    const existingTranslation = poi.translations;
+    if (existingTranslation) {
+      if (transData.imageUrl === null && existingTranslation.image_public_id) {
+        await destroyCloudinaryAsset(existingTranslation.image_public_id, 'image');
+        transData.image_public_id = null;
+      }
+      if (transData.audioUrl === null && existingTranslation.audio_public_id) {
+        await destroyCloudinaryAsset(existingTranslation.audio_public_id, 'video');
+        transData.audio_public_id = null;
+      }
+    }
+
     await translationRepo.upsertTranslation(poiId, transData);
   }
 

@@ -79,7 +79,7 @@ export default function AdminLayout({
     { href: '/admin/audit-logs', icon: History, label: 'Audit Logs' },
   ];
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  const isActive = (href: string) => pathname === href;
 
   return (
     <div className="h-screen bg-background flex">
