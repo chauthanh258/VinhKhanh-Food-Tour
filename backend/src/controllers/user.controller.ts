@@ -5,12 +5,18 @@ import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 
 export const getAllUsers = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    const users = await userService.getAllUsers();
-    sendResponse(res, 200, users);
+    const skip = parseInt(req.query.skip as string) || 0;
+    const take = parseInt(req.query.take as string) || 20;
+    const search = req.query.search as string;
+    const role = (req.query.role as string) === 'all' ? undefined : (req.query.role as any);
+
+    const { users, total } = await userService.getAllUsers(skip, take, { search, role });
+    sendResponse(res, 200, { data: users, total });
   } catch (error) {
     next(error);
   }
 };
+
 
 export const updateRole = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {

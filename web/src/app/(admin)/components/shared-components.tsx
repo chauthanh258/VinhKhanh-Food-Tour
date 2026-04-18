@@ -206,3 +206,92 @@ export const EmptyState = ({
     {action && <div className="mt-4">{action}</div>}
   </div>
 );
+
+// Pagination Component
+export const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+  className
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  className?: string;
+}) => {
+  if (totalPages <= 1) return null;
+
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const maxVisiblePages = 5;
+  
+  let visiblePages = pages;
+  if (totalPages > maxVisiblePages) {
+    const start = Math.max(0, Math.min(currentPage - Math.ceil(maxVisiblePages / 2), totalPages - maxVisiblePages));
+    visiblePages = pages.slice(start, start + maxVisiblePages);
+  }
+
+  return (
+    <div className={cn("flex flex-wrap items-center justify-between gap-4 py-4", className)}>
+      <p className="text-sm text-muted-foreground">
+        Trang <span className="font-medium text-foreground">{currentPage}</span> / <span className="font-medium text-foreground">{totalPages}</span>
+      </p>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          Trước
+        </Button>
+        
+        {visiblePages[0] > 1 && (
+          <>
+            <Button
+              variant={currentPage === 1 ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => onPageChange(1)}
+            >
+              1
+            </Button>
+            {visiblePages[0] > 2 && <span className="px-2 text-muted-foreground">...</span>}
+          </>
+        )}
+
+        {visiblePages.map(page => (
+          <Button
+            key={page}
+            variant={currentPage === page ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => onPageChange(page)}
+          >
+            {page}
+          </Button>
+        ))}
+
+        {visiblePages[visiblePages.length - 1] < totalPages && (
+          <>
+            {visiblePages[visiblePages.length - 1] < totalPages - 1 && <span className="px-2 text-muted-foreground">...</span>}
+            <Button
+              variant={currentPage === totalPages ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => onPageChange(totalPages)}
+            >
+              {totalPages}
+            </Button>
+          </>
+        )}
+
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          Sau
+        </Button>
+      </div>
+    </div>
+  );
+};
+

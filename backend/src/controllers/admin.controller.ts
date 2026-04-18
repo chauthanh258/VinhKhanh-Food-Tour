@@ -92,12 +92,20 @@ export const getAllPOIs = async (req: AuthenticatedRequest, res: Response, next:
   try {
     const skip = parseInt(req.query.skip as string) || 0;
     const take = parseInt(req.query.take as string) || 20;
-    const result = await adminService.getAllPOIs(skip, take);
+    
+    const filters = {
+      search: req.query.search as string,
+      categoryId: req.query.categoryId as string,
+      isActive: req.query.status === 'active' ? true : req.query.status === 'inactive' ? false : undefined,
+    };
+
+    const result = await adminService.getAllPOIs(skip, take, filters);
     sendResponse(res, 200, result);
   } catch (error) {
     next(error);
   }
 };
+
 
 export const getPOIDetails = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {

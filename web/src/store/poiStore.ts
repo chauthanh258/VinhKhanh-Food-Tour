@@ -7,7 +7,7 @@ interface POIState {
   loading: boolean;
   error: string | null;
   total: number;
-  fetchPOIs: (filter?: { skip?: number; take?: number }) => Promise<void>;
+  fetchPOIs: (filter?: any) => Promise<void>;
   createPOI: (data: any) => Promise<void>;
   updatePOI: (id: string, data: any) => Promise<void>;
   uploadPOIMedia: (id: string, data: FormData) => Promise<void>;
@@ -26,16 +26,21 @@ export const usePOIStore = create<POIState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const result = await poiApi.getAll(filter);
+      // Result can be [POI] or { pois: [POI], total: number }
       const poisArray = Array.isArray(result) ? result : (result.pois || []);
+      const totalCount = Array.isArray(result) ? poisArray.length : (result.total || poisArray.length);
+      
       set({
         pois: poisArray,
-        total: poisArray.length,
+        total: totalCount,
         loading: false,
       });
     } catch (error: any) {
       set({ error: error.message || 'Failed to fetch POIs', loading: false });
     }
   },
+
+
 
   createPOI: async (data) => {
     set({ loading: true, error: null });

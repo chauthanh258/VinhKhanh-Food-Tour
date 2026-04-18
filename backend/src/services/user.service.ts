@@ -2,9 +2,17 @@ import * as userRepo from '../repositories/user.repo';
 import { AppError } from '../middlewares/error.middleware';
 import { Role } from '@prisma/client';
 
-export const getAllUsers = async () => {
-  return userRepo.findAllUsers();
+export const getAllUsers = async (
+  skip: number = 0,
+  take: number = 20,
+  filters?: {
+    search?: string;
+    role?: Role;
+  }
+) => {
+  return userRepo.findAllUsers(skip, take, filters);
 };
+
 
 export const updateRole = async (userId: string, role: Role) => {
   const user = await userRepo.findUserById(userId);

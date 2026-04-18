@@ -94,9 +94,32 @@ export const deleteUser = async (
 };
 
 // POI Actions
-export const getAllPOIs = async (skip: number = 0, take: number = 20) => {
+export const getAllPOIs = async (
+  skip: number = 0,
+  take: number = 20,
+  filters?: {
+    search?: string;
+    categoryId?: string;
+    isActive?: boolean;
+  }
+) => {
+  const where: any = {
+    deletedAt: null,
+    ...(filters?.categoryId && { categoryId: filters.categoryId }),
+    ...(filters?.isActive !== undefined && { isActive: filters.isActive }),
+    ...(filters?.search && {
+      translations: {
+        name: {
+          contains: filters.search,
+          mode: 'insensitive',
+        },
+      },
+    }),
+  };
+
   const [pois, total] = await Promise.all([
     prisma.pOI.findMany({
+      where,
       skip,
       take,
       orderBy: { createdAt: 'desc' },
@@ -111,7 +134,7 @@ export const getAllPOIs = async (skip: number = 0, take: number = 20) => {
         _count: { select: { menuItems: true } },
       },
     }),
-    prisma.pOI.count(),
+    prisma.pOI.count({ where }),
   ]);
   return { 
     pois: pois.map(poi => ({
@@ -125,6 +148,7 @@ export const getAllPOIs = async (skip: number = 0, take: number = 20) => {
     total 
   };
 };
+
 
 export const getPendingRequests = async () => {
   const [pendingPOIs, pendingUsers] = await Promise.all([

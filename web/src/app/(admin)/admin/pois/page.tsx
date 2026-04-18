@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { Edit, Trash2, Search, Plus } from 'lucide-react';
-import { Card, Button, Input, Textarea, Select, Badge, Dialog } from '../../components/shared-components';
+import { Card, Button, Input, Textarea, Select, Badge, Dialog, Pagination } from '../../components/shared-components';
 import dynamic from 'next/dynamic';
 import { useCategoryStore, usePOIStore, useAuditStore, useUserAdminStore } from '@/store';
 import { useToast } from '@/components/Toast';
@@ -15,9 +15,12 @@ const DEFAULT_LNG = 106.6630;
 const POIManager = () => {
   const { addToast } = useToast();
   const { categories, fetchCategories, getCategoryName, getCategoryOptions } = useCategoryStore();
-  const { pois, loading, error, fetchPOIs, createPOI, updatePOI, updatePOIStatus, deletePOI, getPOIName } = usePOIStore();
+  const { pois, loading, error, fetchPOIs, createPOI, updatePOI, updatePOIStatus, deletePOI, getPOIName, total } = usePOIStore();
   const { fetchLogs } = useAuditStore();
   const { users, fetchUsers } = useUserAdminStore();
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPOI, setEditingPOI] = useState<any>(null);
@@ -40,25 +43,30 @@ const POIManager = () => {
 
   useEffect(() => {
     fetchCategories();
-    fetchPOIs();
     fetchUsers({ skip: 0, take: 100 });
   }, []);
+
+  useEffect(() => {
+    fetchPOIs({
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      search,
+      categoryId: categoryFilter,
+      status: statusFilter,
+    });
+  }, [page, pageSize, search, categoryFilter, statusFilter]);
 
   console.log(pois);
   const ownerOptions = users
     .filter((user) => user.role === 'OWNER')
     .map((owner) => ({ label: owner.fullName || owner.email, value: owner.id }));
 
-  const filteredPOIs = pois.filter((poi) => {
-    const name = getPOIName(poi).toLowerCase();
-    const matchesSearch = name.includes(search.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || poi.categoryId === categoryFilter;
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'active' && poi.isActive) ||
-      (statusFilter === 'inactive' && !poi.isActive);
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  const totalPages = Math.ceil(total / pageSize);
+
+  const handleFilterChange = (setter: any) => (value: any) => {
+    setter(value);
+    setPage(1);
+  };
 
   const resetForm = () => {
     setFormData({
@@ -188,14 +196,14 @@ const POIManager = () => {
             placeholder="Tìm kiếm theo tên POI..."
             className="pl-10"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => handleFilterChange(setSearch)(e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Select
             options={[{ label: 'Tất cả danh mục', value: 'all' }, ...getCategoryOptions()]}
             value={categoryFilter}
-            onChange={setCategoryFilter}
+            onChange={handleFilterChange(setCategoryFilter)}
           />
           <Select
             options={[
@@ -204,7 +212,19 @@ const POIManager = () => {
               { label: 'Tạm ngưng', value: 'inactive' },
             ]}
             value={statusFilter}
-            onChange={setStatusFilter}
+            onChange={handleFilterChange(setStatusFilter)}
+          />
+          <Select
+            options={[
+              { label: '10 / trang', value: 10 },
+              { label: '20 / trang', value: 20 },
+              { label: '50 / trang', value: 50 },
+            ]}
+            value={pageSize}
+            onChange={(val) => {
+              setPageSize(Number(val));
+              setPage(1);
+            }}
           />
         </div>
       </Card>
@@ -229,8 +249,13 @@ const POIManager = () => {
               <th className="px-6 py-4 text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
-            {filteredPOIs.map((poi) => (
+          <tbody className="divide-y divide-border relative">
+            {loading && (
+               <div className="absolute inset-0 bg-secondary/20 backdrop-blur-[1px] flex items-center justify-center z-10">
+                 <Badge variant="default">Đang tải...</Badge>
+               </div>
+            )}
+            {pois.map((poi) => (
               <tr key={poi.id} className="hover:bg-secondary/50 transition-colors">
                 <td className="px-6 py-4 font-mono text-xs">#{poi.id.slice(0, 8)}</td>
                 <td className="px-6 py-4 font-medium">{getPOIName(poi)}</td>
@@ -261,7 +286,13 @@ const POIManager = () => {
         </table>
       </div>
 
-      {filteredPOIs.length === 0 && (
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
+
+      {pois.length === 0 && !loading && (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">Không tìm thấy POI nào</p>
         </Card>
