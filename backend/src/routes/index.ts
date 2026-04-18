@@ -6,6 +6,7 @@ import adminRoutes from './admin.routes';
 import moderationRoutes from './moderation.routes';
 import menuItemRoutes from './menuItem.routes';
 import categoryRoutes from './category.routes';
+import locationRoutes from './location.routes';
 
 import publicCategoryRoutes from './public.category.routes';
 
@@ -20,5 +21,6 @@ router.use('/', ownerRoutes);
 router.use('/moderation', moderationRoutes);
 router.use('/owners', ownerRoutes);
 router.use('/', menuItemRoutes);
+router.use('/location', locationRoutes);
 
 export default router;

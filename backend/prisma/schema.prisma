@@ -163,3 +163,16 @@ model ModerationRequest {
   @@unique([targetId, type])
   @@map("moderation_requests")
 }
+
+model UserLocation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  lat       Float
+  lng       Float
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([lat, lng])
+  @@map("user_locations")
+}
+
