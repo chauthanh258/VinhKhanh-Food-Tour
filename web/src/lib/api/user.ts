@@ -14,6 +14,8 @@ export interface User {
 export interface UserFilter {
   skip?: number;
   take?: number;
+  search?: string;
+  role?: string;
 }
 
 export const userApi = {
@@ -21,10 +23,14 @@ export const userApi = {
     const params = new URLSearchParams();
     if (filter?.skip !== undefined) params.append('skip', filter.skip.toString());
     if (filter?.take !== undefined) params.append('take', filter.take.toString());
+    if (filter?.search) params.append('search', filter.search);
+    if (filter?.role && filter.role !== 'all') params.append('role', filter.role);
+    
     const query = params.toString() ? `?${params.toString()}` : '';
     const response = await api.get(`/admin/users${query}`);
     return response.data;
   },
+
 
   getById: async (id: string) => {
     const response = await api.get(`/admin/users/${id}`);

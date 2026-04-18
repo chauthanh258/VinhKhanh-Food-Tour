@@ -6,7 +6,7 @@ interface UserState {
   loading: boolean;
   error: string | null;
   total: number;
-  fetchUsers: (filter?: { skip?: number; take?: number }) => Promise<void>;
+  fetchUsers: (filter?: any) => Promise<void>;
   updateUserRole: (userId: string, role: string) => Promise<void>;
   updateUser: (id: string, data: Partial<User>) => Promise<void>;
   updateUserStatus: (id: string, isActive: boolean) => Promise<void>;
@@ -23,16 +23,21 @@ export const useUserAdminStore = create<UserState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const result = await userApi.getAll(filter);
-      const usersArray = Array.isArray(result) ? result : (result.data || []);
+      // Result is { data: users, total }
+      const usersArray = result.data || [];
+      const totalCount = result.total || usersArray.length;
+      
       set({
         users: usersArray,
-        total: usersArray.length,
+        total: totalCount,
         loading: false,
       });
     } catch (error: any) {
       set({ error: error.message || 'Failed to fetch users', loading: false });
     }
   },
+
+
 
   updateUserRole: async (userId, role) => {
     set({ loading: true, error: null });

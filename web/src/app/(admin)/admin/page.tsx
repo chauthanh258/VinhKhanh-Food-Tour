@@ -6,6 +6,9 @@ import { Card, Button, Badge } from '../components/shared-components';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { poiApi } from '@/lib/api/poi';
 import { useCategoryStore, useAuditStore } from '@/store';
+import dynamic from 'next/dynamic';
+
+const RealtimeMap = dynamic(() => import('./components/RealtimeMap'), { ssr: false });
 
 const getActionLabel = (action: string) => {
   const actionMap: Record<string, string> = {
@@ -140,7 +143,14 @@ const AdminDashboard = () => {
       
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Line Chart */}
+              
+              {/* Realtime Map / Heatmap (2 columns width) */}
+              <Card className="lg:col-span-2">
+                <h3 className="text-lg font-bold text-foreground mb-6">Bản đồ thực tế & Mật độ người dùng</h3>
+                <RealtimeMap />
+              </Card>
+
+              {/* Pie Chart */}
               <Card className="lg:col-span-2">
                 <h3 className="text-lg font-bold text-foreground mb-6">Lượng khách truy cập</h3>
                 <ResponsiveContainer width="100%" height={300}>
@@ -167,7 +177,7 @@ const AdminDashboard = () => {
                 </ResponsiveContainer>
               </Card>
       
-              {/* Pie Chart */}
+              {/* Pie Chart and recent activity wrapper will wrap naturally but let's just make pie chart span 1 column */}
               <Card>
                 <h3 className="text-lg font-bold text-foreground mb-6">Phân loại danh mục</h3>
                 {categoryData.length > 0 ? (

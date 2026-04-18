@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Users, Activity, Plus, Clock, Route, Eye, Search, Play, Trash2, Edit } from 'lucide-react';
-import { Card, Button, Input, Badge, Dialog, cn, Select, EmptyState } from '../../components/shared-components';
+import { Card, Button, Input, Badge, Dialog, cn, Select, EmptyState, Pagination } from '../../components/shared-components';
 import { BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useUserAdminStore, useAuditStore } from '@/store';
 import { useToast } from '@/components/Toast';
@@ -26,9 +26,11 @@ interface UserSession {
 
 const UserManager = () => {
   const { addToast } = useToast();
-  const { users, loading, error, fetchUsers, updateUserStatus, deleteUser, updateUser } = useUserAdminStore();
+  const { users, loading, error, fetchUsers, updateUserStatus, deleteUser, updateUser, total } = useUserAdminStore();
   const { fetchLogs } = useAuditStore();
   const [activeTab, setActiveTab] = useState('active');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedSession, setSelectedSession] = useState<UserSession | null>(null);
   const [isJourneyOpen, setIsJourneyOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,22 +47,46 @@ const UserManager = () => {
   const [confirmUnlock, setConfirmUnlock] = useState<{ isOpen: boolean; user: any }>({ isOpen: false, user: null });
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    const filter: any = {
+      search: searchQuery,
+      role: roleFilter,
+    };
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch = user.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+    if (activeTab === 'active') {
+      filter.isActive = true;
+      filter.skip = (page - 1) * pageSize;
+      filter.take = pageSize;
+    } else if (activeTab === 'inactive') {
+      filter.isActive = false;
+      filter.skip = (page - 1) * pageSize;
+      filter.take = pageSize;
+    } else if (activeTab === 'stats') {
+      // Fetch all for stats (simplified)
+      filter.take = 1000;
+    }
 
-  const activeUsers = filteredUsers.filter(u => u.isActive);
-  const inactiveUsers = filteredUsers.filter(u => !u.isActive);
+    fetchUsers(filter);
+  }, [activeTab, page, pageSize, searchQuery, roleFilter]);
+
+  const totalPages = Math.ceil(total / pageSize);
+
+  const handleFilterChange = (setter: any) => (value: any) => {
+    setter(value);
+    setPage(1);
+  };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setPage(1);
+  };
+
+  // For stats, we use the results from the fetch (which could be up to 1000 users when on stats tab)
+  const activeUsersCount = users.filter(u => u.isActive).length;
+  const inactiveUsersCount = users.filter(u => !u.isActive).length;
 
   const stats = [
-    { label: 'Tổng người dùng', value: users.length.toString(), icon: Users, color: 'bg-blue-500/10 text-blue-500' },
-    { label: 'Đang hoạt động', value: activeUsers.length.toString(), icon: Activity, color: 'bg-emerald-500/10 text-emerald-500' },
+    { label: 'Tổng người dùng', value: total.toString(), icon: Users, color: 'bg-blue-500/10 text-blue-500' },
+    { label: 'Đang hoạt động', value: activeUsersCount.toString(), icon: Activity, color: 'bg-emerald-500/10 text-emerald-500' },
     { label: 'Người dùng mới (24h)', value: '42', icon: Plus, color: 'bg-orange-500/10 text-orange-500' },
     { label: 'Admin', value: users.filter(u => u.role === 'ADMIN').length.toString(), icon: Clock, color: 'bg-purple-500/10 text-purple-500' },
   ];
@@ -140,7 +166,7 @@ const UserManager = () => {
         {['active', 'stats', 'inactive'].map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => handleTabChange(tab)}
             className={cn(
               'px-4 py-3 text-sm font-medium border-b-2 transition-colors',
               activeTab === tab
@@ -162,10 +188,10 @@ const UserManager = () => {
                 placeholder="Tìm kiếm theo tên hoặc email..."
                 className="pl-10"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleFilterChange(setSearchQuery)(e.target.value)}
               />
             </div>
-            <div className="w-48">
+            <div className="flex-1 max-w-[200px]">
               <Select
                 options={[
                   { label: 'Tất cả vai trò', value: 'all' },
@@ -174,7 +200,21 @@ const UserManager = () => {
                   { label: 'User', value: 'USER' }
                 ]}
                 value={roleFilter}
-                onChange={setRoleFilter}
+                onChange={handleFilterChange(setRoleFilter)}
+              />
+            </div>
+            <div className="w-48">
+              <Select
+                options={[
+                  { label: '10 / trang', value: 10 },
+                  { label: '20 / trang', value: 20 },
+                  { label: '50 / trang', value: 50 },
+                ]}
+                value={pageSize}
+                onChange={(val) => {
+                  setPageSize(Number(val));
+                  setPage(1);
+                }}
               />
             </div>
           </Card>
@@ -191,8 +231,13 @@ const UserManager = () => {
                   <th className="px-6 py-4 text-right">Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {filteredUsers.filter(u => u.isActive).map(user => (
+              <tbody className="divide-y divide-border relative">
+                {loading && (
+                   <div className="absolute inset-0 bg-secondary/20 backdrop-blur-[1px] flex items-center justify-center z-10">
+                     <Badge variant="default">Đang tải...</Badge>
+                   </div>
+                )}
+                {users.map(user => (
                   <tr key={user.id} className="hover:bg-secondary/50 transition-colors">
                     <td className="px-6 py-4 font-medium">{user.fullName || 'N/A'}</td>
                     <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
@@ -217,7 +262,14 @@ const UserManager = () => {
                 ))}
               </tbody>
             </table>
-            {filteredUsers.filter(u => u.isActive).length === 0 && (
+            <div className="px-6 border-t border-border">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+            {users.length === 0 && !loading && (
               <EmptyState 
                 title="Không có người dùng nào" 
                 description="Chưa có người dùng hoạt động." 
@@ -279,8 +331,13 @@ const UserManager = () => {
                 <th className="px-6 py-4 text-right">Hành động</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {inactiveUsers.map(user => (
+            <tbody className="divide-y divide-border relative">
+              {loading && (
+                 <div className="absolute inset-0 bg-secondary/20 backdrop-blur-[1px] flex items-center justify-center z-10">
+                   <Badge variant="default">Đang tải...</Badge>
+                 </div>
+              )}
+              {users.map(user => (
                 <tr key={user.id} className="hover:bg-secondary/50 transition-colors">
                   <td className="px-6 py-4 font-medium">{user.fullName || 'N/A'}</td>
                   <td className="px-6 py-4 text-muted-foreground">{user.email}</td>
@@ -296,7 +353,14 @@ const UserManager = () => {
               ))}
             </tbody>
           </table>
-          {inactiveUsers.length === 0 && (
+          <div className="px-6 border-t border-border">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+            />
+          </div>
+          {users.length === 0 && !loading && (
             <EmptyState 
               title="Không có người dùng bị khóa" 
               description="Tất cả người dùng đang hoạt động." 

@@ -9,6 +9,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import PlaceList from '@/app/(app)/tour/components/PlaceList';
 import { useUserStore } from '@/store/userStore';
 import { PoiAudioDrawer, type POI } from '@/app/(app)/tour/components/PoiAudioDrawer';
+import { api } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -105,6 +106,31 @@ function TourPageContent() {
     if (!userPos) return;
     fetchPois(userPos[0], userPos[1]);
   }, [userPos, language, fetchPois]);
+
+  // Report location to backend for heatmap/analytics
+  useEffect(() => {
+    if (!userPos) return;
+    
+    const reportLocation = async () => {
+      try {
+        await api.post('/location/report', {
+          lat: userPos[0],
+          lng: userPos[1]
+        });
+      } catch (err) {
+        // Silently fail location reporting to not disturb user experience
+        console.warn('Failed to report location:', err);
+      }
+    };
+
+    // Initial report
+    reportLocation();
+
+    // Periodic report every 30 seconds
+    const intervalId = setInterval(reportLocation, 30000);
+    
+    return () => clearInterval(intervalId);
+  }, [userPos]);
 
   useEffect(() => {
     const poiId = searchParams.get('poiId');

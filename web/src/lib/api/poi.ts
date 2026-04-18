@@ -38,6 +38,9 @@ export interface POI {
 export interface POIFilter {
   skip?: number;
   take?: number;
+  search?: string;
+  categoryId?: string;
+  status?: string;
 }
 
 export const poiApi = {
@@ -45,10 +48,15 @@ export const poiApi = {
     const params = new URLSearchParams();
     if (filter?.skip !== undefined) params.append('skip', filter.skip.toString());
     if (filter?.take !== undefined) params.append('take', filter.take.toString());
+    if (filter?.search) params.append('search', filter.search);
+    if (filter?.categoryId && filter.categoryId !== 'all') params.append('categoryId', filter.categoryId);
+    if (filter?.status && filter.status !== 'all') params.append('status', filter.status);
+    
     const query = params.toString() ? `?${params.toString()}` : '';
     const response = await api.get(`/admin/pois${query}`);
     return response.data;
   },
+
 
   getById: async (id: string) => {
     const response = await api.get(`/admin/pois/${id}`);
