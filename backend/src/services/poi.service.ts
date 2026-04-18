@@ -70,7 +70,16 @@ export const updatePOIAsOwner = async (poiId: string, userId: string, userRole: 
 
   const { translations, ...poiData } = data;
 
-  if (poiData.lat !== undefined || poiData.lng !== undefined || poiData.isActive !== undefined) {
+  if (userRole === 'OWNER') {
+    delete poiData.isActive;
+  }
+
+  if (
+    poiData.lat !== undefined ||
+    poiData.lng !== undefined ||
+    poiData.isActive !== undefined ||
+    poiData.categoryId !== undefined
+  ) {
     await poiRepo.updatePOI(poiId, poiData);
   }
 
