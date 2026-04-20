@@ -8,18 +8,21 @@ export function proxy(request: NextRequest) {
 
   // 1. If trying to access protected routes without token
   const isProtectedRoute =
-    pathname.startsWith('/tour') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/owner') ||
     pathname.startsWith('/settings') ||
-    pathname.startsWith('/profile') ||
-    pathname === '/';
+    pathname.startsWith('/profile');
   const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
 
   const isValidToken = token && token !== 'undefined' && token !== 'null' && token !== '';
 
   if (!isValidToken && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  // Handle root route for guests
+  if (!isValidToken && pathname === '/') {
+    return NextResponse.redirect(new URL('/tour', request.url));
   }
 
   // 2. If logged in and trying to access login/register

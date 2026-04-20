@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { Mail, Lock, ArrowRight, Chrome, Eye, EyeOff } from "lucide-react";
 import { useUserStore } from "@/store/userStore";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useGoogleLogin } from "@react-oauth/google";
 
 function GoogleLoginButton({ isLoading, onLoginSuccess }: { isLoading: boolean; onLoginSuccess: () => void }) {
@@ -29,14 +29,15 @@ function GoogleLoginButton({ isLoading, onLoginSuccess }: { isLoading: boolean; 
   );
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { setAuth } = useUserStore();
   const router = useRouter();
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +53,17 @@ export default function LoginPage() {
       
       if (result.success) {
         setAuth(result.data.user, result.data.token);
-        router.push("/");
+        
+        // Handle role-based redirect
+        const role = result.data.user.role;
+        if (role === 'OWNER') {
+          router.push('/owner');
+        } else if (role === 'ADMIN') {
+          router.push('/admin');
+        } else {
+          // Regular user redirect to callback or home
+          router.push(callbackUrl || "/tour");
+        }
       } else {
         alert(result.message || "Đăng nhập thất bại");
       }
@@ -63,31 +74,6 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
-
-  const handleGoogleSuccess = async () => {
-      setIsLoading(true);
-      try {
-        // In a real app, send the token to your backend
-        // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/google`, {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify({ idToken: tokenResponse.access_token }),
-        // });
-        // const result = await response.json();
-        
-        // Mock successful Google login
-        setAuth(
-          { id: "1", email: "google-user@example.com", fullName: "Google User", role: "USER", language: "vi", isOnboarded: false },
-          "mock-google-token"
-        );
-        // router.push("/");
-        console.log("Google login success");
-      } catch (error) {
-        console.error("Google login failed:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 w-full">
@@ -166,24 +152,6 @@ export default function LoginPage() {
         </button>
       </form>
 
-      {/* <div className="relative py-2">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-zinc-800"></div>
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-zinc-950 px-3 text-zinc-500">Hoặc tiếp tục với</span>
-        </div>
-      </div>
-
-      <button
-        onClick={() => loginWithGoogle()}
-        disabled={isLoading}
-        className="w-full h-14 bg-zinc-100 hover:bg-white disabled:bg-zinc-300 text-black rounded-2xl transition-all font-semibold flex items-center justify-center gap-3 border border-zinc-200"
-      >
-        <Chrome className="w-5 h-5" /> 
-        Tiếp tục với Google
-      </button> */}
-
       <p className="text-center text-zinc-500 mt-4">
         Chưa có tài khoản?{" "}
         <Link href="/register" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">
@@ -191,5 +159,17 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
