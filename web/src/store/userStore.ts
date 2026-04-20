@@ -31,19 +31,24 @@ export const useUserStore = create<UserState>()(
     (set) => ({
       user: null,
       token: Cookies.get('auth-token') || null,
-      language: 'vi',
+      language: 'en',
       location: null,
       isOnboarded: false,
 
       setAuth: (user, token) => {
         Cookies.set('auth-token', token, { expires: 7 });
         Cookies.set('user-role', user.role, { expires: 7 });
-        set({ user, token, language: user.language, isOnboarded: user.isOnboarded });
+        set((state) => ({ 
+          user, 
+          token, 
+          language: user.language || state.language || 'en', 
+          isOnboarded: user.isOnboarded 
+        }));
       },
       logout: () => {
         Cookies.remove('auth-token');
         Cookies.remove('user-role');
-        set({ user: null, token: null, isOnboarded: false });
+        set({ user: null, token: null, isOnboarded: false, language: 'en' });
       },
       setLanguage: (language) => set({ language }),
       setOnboarded: (isOnboarded) => set({ isOnboarded }),

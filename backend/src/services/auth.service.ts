@@ -29,7 +29,9 @@ export const register = async (email: string, password: string, fullName: string
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      role: user.role
+      role: user.role,
+      language: user.language,
+      isOnboarded: user.isOnboarded
     },
     token
   };
@@ -53,7 +55,9 @@ export const login = async (email: string, password: string) => {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      role: user.role
+      role: user.role,
+      language: user.language,
+      isOnboarded: user.isOnboarded
     },
     token
   };

@@ -64,7 +64,7 @@ export default function SettingsPage() {
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
+    router.push("/");
   };
 
   // const handleUpdateProfile = async () => {
