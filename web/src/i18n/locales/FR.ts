@@ -6,6 +6,7 @@ const FR: Translations = {
     map: 'Carte',
     explore: 'Explorer',
     account: 'Compte',
+    login: 'Se connecter',
     settings: 'Paramètres',
   },
 

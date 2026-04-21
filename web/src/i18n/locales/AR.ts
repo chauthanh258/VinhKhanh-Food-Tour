@@ -6,6 +6,7 @@ const AR: Translations = {
     map: 'الخريطة',
     explore: 'استكشاف',
     account: 'الحساب',
+    login: 'تسجيل الدخول',
     settings: 'الإعدادات',
   },
 

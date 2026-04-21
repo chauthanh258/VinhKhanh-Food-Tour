@@ -4,6 +4,7 @@ const VI = {
     map: 'Bản đồ',
     explore: 'Khám phá',
     account: 'Tài khoản',
+    login: 'Đăng nhập',
     settings: 'Cài đặt',
   },
 

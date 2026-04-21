@@ -6,6 +6,7 @@ const JA: Translations = {
     map: '地図',
     explore: '探索',
     account: 'アカウント',
+    login: 'ログイン',
     settings: '設定',
   },
 

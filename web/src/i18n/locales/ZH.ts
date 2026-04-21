@@ -6,6 +6,7 @@ const ZH: Translations = {
     map: '地图',
     explore: '探索',
     account: '账户',
+    login: '登录',
     settings: '设置',
   },
 

@@ -6,6 +6,7 @@ const PT: Translations = {
     map: 'Mapa',
     explore: 'Explorar',
     account: 'Conta',
+    login: 'Entrar',
     settings: 'Configurações',
   },
 

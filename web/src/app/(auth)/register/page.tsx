@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Mail, Lock, User, ArrowRight, Chrome, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Chrome, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useUserStore } from "@/store/userStore";
 import { useRouter } from "next/navigation";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -82,19 +82,19 @@ export default function RegisterPage() {
     };
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-orange-400 to-yellow-300 bg-clip-text text-transparent">
-          Tạo tài khoản mới
+          Create new account
         </h1>
         <p className="text-zinc-400">
-          Tham gia cộng đồng và bắt đầu hành trình của bạn ngay hôm nay
+          Join the community and start your journey today
         </p>
       </div>
 
       <form onSubmit={handleRegister} className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-zinc-300 ml-1">Họ và tên</label>
+          <label className="text-sm font-medium text-zinc-300 ml-1">Full name</label>
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <User className="w-5 h-5 text-zinc-500 group-focus-within:text-orange-400 transition-colors" />
@@ -105,7 +105,7 @@ export default function RegisterPage() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className="block w-full h-14 bg-zinc-900 border border-zinc-800 rounded-2xl pl-12 pr-4 text-white focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 outline-none transition-all placeholder:text-zinc-600"
-              placeholder="Nguyễn Văn A"
+              placeholder="Nguyen Van A"
             />
           </div>
         </div>
@@ -128,7 +128,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-zinc-300 ml-1">Mật khẩu</label>
+          <label className="text-sm font-medium text-zinc-300 ml-1">Password</label>
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Lock className="w-5 h-5 text-zinc-500 group-focus-within:text-orange-400 transition-colors" />
@@ -164,7 +164,7 @@ export default function RegisterPage() {
             <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           ) : (
             <>
-              Đăng ký <ArrowRight className="w-5 h-5" />
+              Register <ArrowRight className="w-5 h-5" />
             </>
           )}
         </button>
@@ -175,7 +175,7 @@ export default function RegisterPage() {
           <div className="w-full border-t border-zinc-800"></div>
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-zinc-950 px-3 text-zinc-500">Hoặc tiếp tục với</span>
+          <span className="bg-zinc-950 px-3 text-zinc-500">Or continue with</span>
         </div>
       </div>
 
@@ -184,13 +184,13 @@ export default function RegisterPage() {
         className="w-full h-14 bg-zinc-100 hover:bg-white text-black rounded-2xl transition-all font-semibold flex items-center justify-center gap-3 border border-zinc-200"
       >
         <Chrome className="w-5 h-5" /> 
-        Tiếp tục với Google
+        Continue with Google
       </button> */}
 
       <p className="text-center text-zinc-500 mt-4">
-        Đã có tài khoản?{" "}
+        Already have an account?{" "}
         <Link href="/login" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">
-          Đăng nhập
+          Login
         </Link>
       </p>
     </div>

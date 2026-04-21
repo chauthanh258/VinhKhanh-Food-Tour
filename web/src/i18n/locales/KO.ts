@@ -6,6 +6,7 @@ const KO: Translations = {
     map: '지도',
     explore: '탐색',
     account: '계정',
+    login: '로그인',
     settings: '설정',
   },
 
