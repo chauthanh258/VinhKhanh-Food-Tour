@@ -67,6 +67,13 @@ interface POIItem {
   lng: number;
   rating: number;
   isActive: boolean;
+  categoryId?: string | null;
+  category?: {
+    id: string;
+    translations?: Array<{
+      name: string;
+    }>;
+  };
   translations?: Array<{
     name: string;
     description?: string;
@@ -80,6 +87,7 @@ interface POIItem {
 export default function POIManagement() {
   const defaultMapCenter: [number, number] = [10.7769, 106.7009];
   const [pois, setPois] = useState<POIItem[]>([]);
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "hidden">("all");
@@ -92,18 +100,18 @@ export default function POIManagement() {
   const [selectedPoi, setSelectedPoi] = useState<POIItem | null>(null);
   const [formData, setFormData] = useState<{
     name: string;
-    specialties: string;
     priceRange: string;
     description: string;
+    categoryId: string;
     imageUrl: string | null;
     audioUrl: string | null;
     lat: number;
     lng: number;
   }>({
     name: "",
-    specialties: "",
     priceRange: "",
     description: "",
+    categoryId: "",
     imageUrl: "",
     audioUrl: "",
     lat: 0,
@@ -122,6 +130,13 @@ export default function POIManagement() {
   const selectedPosition: [number, number] | null = hasSelectedPosition
     ? [formData.lat, formData.lng]
     : null;
+  const getCategoryNameById = useCallback(
+    (categoryId?: string | null) => {
+      if (!categoryId) return "No category";
+      return categories.find((category) => category.id === categoryId)?.name || "No category";
+    },
+    [categories]
+  );
 
   useEffect(() => {
     return () => {
@@ -163,6 +178,7 @@ export default function POIManagement() {
             console.log(poi),
             {
             ...poi,
+            categoryId: poi.categoryId || poi.category?.id || null,
             name: poi.translations?.name || "Unnamed POI",
             specialties: poi.translations?.specialties || "",
             priceRange: poi.translations?.priceRange || "",
@@ -194,6 +210,25 @@ export default function POIManagement() {
   useEffect(() => {
     fetchPOIs();
   }, [fetchPOIs]);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await api.get("/categories");
+      const categoryList = response.data?.categories ?? [];
+      setCategories(
+        categoryList.map((category: any) => ({
+          id: category.id,
+          name: category.translations?.[0]?.name || "Unnamed category",
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   const requestCurrentLocation = useCallback(() => {
     setIsResolvingLocation(true);
@@ -238,9 +273,9 @@ export default function POIManagement() {
       const normalizedImageUrl = normalizePoiImageUrl(poi.translations?.[0]?.imageUrl);
       setFormData({
         name: poi.name,
-        specialties: poi.translations?.[0]?.specialties || "",
         priceRange: poi.translations?.[0]?.priceRange || "",
         description: poi.translations?.[0]?.description || "",
+        categoryId: poi.categoryId || poi.category?.id || "",
         imageUrl: normalizedImageUrl,
         audioUrl: poi.translations?.[0]?.audioUrl || "",
         lat: poi.lat,
@@ -251,7 +286,7 @@ export default function POIManagement() {
       setAudioFile(null);
     } else {
       setSelectedPoi(null);
-      const emptyForm = { name: "", specialties: "", priceRange: "", description: "", imageUrl: "", audioUrl: "", lat: 0, lng: 0 };
+      const emptyForm = { name: "", priceRange: "", description: "", categoryId: "", imageUrl: "", audioUrl: "", lat: 0, lng: 0 };
       setFormData(emptyForm);
       setImagePreview("");
       setImageFile(null);
@@ -273,7 +308,7 @@ export default function POIManagement() {
     setIsResolvingLocation(false);
     setLocationError("");
     setSelectedPoi(null);
-    setFormData({ name: "", specialties: "", priceRange: "", description: "", imageUrl: "", audioUrl: "", lat: 0, lng: 0 });
+    setFormData({ name: "", priceRange: "", description: "", categoryId: "", imageUrl: "", audioUrl: "", lat: 0, lng: 0 });
     setImagePreview("");
     setImageFile(null);
     setAudioFile(null);
@@ -320,19 +355,25 @@ export default function POIManagement() {
       return;
     }
 
+    if (!formData.categoryId.trim()) {
+      alert("Please select a category.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const imageUrl = formData.imageUrl === null ? null : (formData.imageUrl?.trim() || undefined);
       const audioUrl = formData.audioUrl === null ? null : (formData.audioUrl?.trim() || undefined);
+      const categoryId = formData.categoryId.trim() || undefined;
 
       const payload = {
         lat: Number(formData.lat),
         lng: Number(formData.lng),
+        categoryId,
         translations: [
           {
             name: formData.name,
             description: formData.description,
-            specialties: formData.specialties,
             priceRange: formData.priceRange.trim() || undefined,
             imageUrl,
             audioUrl,
@@ -532,7 +573,7 @@ export default function POIManagement() {
                             {poi.name}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {poi.specialties || "No specialties"}
+                            {getCategoryNameById(poi.categoryId || poi.category?.id)}
                           </p>
                         </div>
                       </div>
@@ -554,11 +595,10 @@ export default function POIManagement() {
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <button
-                        onClick={() => toggleStatus(poi.id, poi.isActive)}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${poi.isActive
-                            ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-500 hover:bg-green-100"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      <div
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold cursor-default select-none ${poi.isActive
+                            ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-500"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                           }`}
                       >
                         {poi.isActive ? (
@@ -567,7 +607,7 @@ export default function POIManagement() {
                           <ToggleLeft className="w-4 h-4" />
                         )}
                         {poi.isActive ? "Active" : "Hidden"}
-                      </button>
+                      </div>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -729,16 +769,21 @@ export default function POIManagement() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                  Specialty Dishes
+                  Category
                 </label>
-                <input
-                  type="text"
-                  value={formData.specialties}
-                  onChange={(e) => setFormData({ ...formData, specialties: e.target.value })}
+                <select
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                   disabled={modalMode === "view"}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-orange-500/20 outline-none disabled:opacity-60"
-                  placeholder="e.g. Beef Pho, Spring Rolls"
-                />
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
