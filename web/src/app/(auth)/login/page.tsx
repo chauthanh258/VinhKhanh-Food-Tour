@@ -79,10 +79,10 @@ function LoginForm() {
     <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700 w-full">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-orange-400 to-yellow-300 bg-clip-text text-transparent">
-          Chào mừng trở lại
+          Welcome back
         </h1>
         <p className="text-zinc-400">
-          Đăng nhập để tiếp tục khám phá ẩm thực Quận 4
+          Login to continue exploring the culinary delights of District 4
         </p>
       </div>
 
@@ -106,9 +106,9 @@ function LoginForm() {
 
         <div className="space-y-2">
           <div className="flex justify-between items-center ml-1">
-            <label className="text-sm font-medium text-zinc-300">Mật khẩu</label>
+            <label className="text-sm font-medium text-zinc-300">Password</label>
             <Link href="/forgot-password" tabIndex={-1} className="text-xs text-orange-400 hover:text-orange-300">
-              Quên mật khẩu?
+              Forgot password?
             </Link>
           </div>
           <div className="relative group">
@@ -146,16 +146,16 @@ function LoginForm() {
             <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           ) : (
             <>
-              Đăng nhập <ArrowRight className="w-5 h-5" />
+              Login <ArrowRight className="w-5 h-5" />
             </>
           )}
         </button>
       </form>
 
       <p className="text-center text-zinc-500 mt-4">
-        Chưa có tài khoản?{" "}
+        Don't have an account?{" "}
         <Link href="/register" className="text-orange-400 font-semibold hover:text-orange-300 transition-colors">
-          Đăng ký ngay
+          Register now
         </Link>
       </p>
     </div>

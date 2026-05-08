@@ -16,8 +16,8 @@ interface AuthPromptModalProps {
 export default function AuthPromptModal({
   isOpen,
   onClose,
-  title = "Đăng nhập để sử dụng",
-  description = "Bạn cần đăng nhập để tiếp tục sử dụng tính năng này.",
+  title = "Login to use",
+  description = "You need to login to continue using this feature.",
   callbackUrl = "/",
   icon
 }: AuthPromptModalProps) {
@@ -43,10 +43,10 @@ export default function AuthPromptModal({
         </p>
         <div className="w-full flex flex-col gap-2 pt-2">
           <Link href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`} className="w-full py-3 bg-orange-500 text-white rounded-xl font-semibold active:scale-95 transition-transform flex items-center justify-center">
-            Đăng nhập ngay
+            Login now
           </Link>
           <button onClick={onClose} className="w-full py-3 text-zinc-400 font-medium active:scale-95 transition-transform opacity-70 hover:opacity-100">
-            Để sau
+            Later
           </button>
         </div>
       </div>

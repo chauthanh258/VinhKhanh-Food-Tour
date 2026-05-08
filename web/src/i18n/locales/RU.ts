@@ -6,6 +6,7 @@ const RU: Translations = {
     map: 'Карта',
     explore: 'Исследовать',
     account: 'Аккаунт',
+    login: 'Войти',
     settings: 'Настройки',
   },
 

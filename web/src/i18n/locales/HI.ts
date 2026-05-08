@@ -6,6 +6,7 @@ const HI: Translations = {
     map: 'मानचित्र',
     explore: 'अन्वेषण करें',
     account: 'खाता',
+    login: 'लॉग इन',
     settings: 'सेटिंग्स',
   },
 

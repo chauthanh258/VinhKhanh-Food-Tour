@@ -6,6 +6,7 @@ const ID: Translations = {
     map: 'Peta',
     explore: 'Jelajahi',
     account: 'Akun',
+    login: 'Masuk',
     settings: 'Pengaturan',
   },
 

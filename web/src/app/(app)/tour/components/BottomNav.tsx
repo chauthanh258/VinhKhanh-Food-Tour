@@ -28,7 +28,7 @@ export default function BottomNav() {
   }>({ isOpen: false });
 
   return (
-    <nav className="absolute bottom-0 left-0 right-0 h-16 bg-zinc-950/80 backdrop-blur-lg border-t border-white/5 flex items-center justify-around z-50 max-w-lg mx-auto px-2">
+    <nav className="fixed bottom-0 left-0 right-0 h-16 bg-zinc-950/80 backdrop-blur-lg border-t border-white/5 flex items-center justify-around z-50 max-w-lg mx-auto px-2">
       <Link
         href="/tour"
         className={`flex flex-col items-center gap-1 transition-colors w-20 ${isTour && currentView === 'map' ? 'text-orange-500' : 'text-zinc-500 hover:text-white'}`}
@@ -51,8 +51,8 @@ export default function BottomNav() {
           if (!isLoggedIn) {
             setAuthPromptConfig({
               isOpen: true,
-              title: "Đăng nhập để sử dụng",
-              description: "Bạn cần đăng nhập để khởi tạo hành trình và tích ngay điểm thưởng thành viên.",
+              title: "Login to use",
+              description: "You need to login to start the tour and get reward points.",
               callbackUrl: "/tour",
               icon: <QrCode className="w-6 h-6 text-orange-500" />
             });
@@ -79,7 +79,7 @@ export default function BottomNav() {
           className={`flex flex-col items-center gap-1 transition-colors text-zinc-500 hover:text-white w-20`}
         >
           <LogIn className="w-5 h-5" />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Đăng nhập</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">{t.nav.login}</span>
         </Link>
       )}
       {isLoggedIn ? (
@@ -95,8 +95,8 @@ export default function BottomNav() {
           onClick={() => {
             setAuthPromptConfig({
               isOpen: true,
-              title: "Cài đặt ứng dụng",
-              description: "Bạn cần đăng nhập để thay đổi các tùy chỉnh này.",
+              title: "Login to use",
+              description: "You need to login to change these settings.",
               callbackUrl: "/settings",
               icon: <Settings className="w-6 h-6 text-orange-500" />
             });

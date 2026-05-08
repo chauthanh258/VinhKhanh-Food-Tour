@@ -6,6 +6,7 @@ const TH: Translations = {
     map: 'แผนที่',
     explore: 'สำรวจ',
     account: 'บัญชี',
+    login: 'เข้าสู่ระบบ',
     settings: 'การตั้งค่า',
   },
 
