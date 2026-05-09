@@ -16,3 +16,6 @@ export type { ModerationRequest, ModerationType, ModerationStatus } from './mode
 
 export { settingsApi, DEFAULT_SETTINGS } from './settings';
 export type { SystemSettings } from './settings';
+
+export { analyticsApi } from './analytics';
+export type { TopPoi, AvgListenTime, OnlineUsers } from './analytics';

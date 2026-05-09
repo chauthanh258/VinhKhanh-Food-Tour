@@ -177,22 +177,22 @@ export default function POIManagement() {
           response.data.data.map((poi: any) => (
             console.log(poi),
             {
-            ...poi,
-            categoryId: poi.categoryId || poi.category?.id || null,
-            name: poi.translations?.name || "Unnamed POI",
-            specialties: poi.translations?.specialties || "",
-            priceRange: poi.translations?.priceRange || "",
-            description: poi.translations?.description || "",
-            translations: Array(poi.translations)?.map((t: any, index: number) =>
+              ...poi,
+              categoryId: poi.categoryId || poi.category?.id || null,
+              name: poi.translations?.name || "Unnamed POI",
+              specialties: poi.translations?.specialties || "",
+              priceRange: poi.translations?.priceRange || "",
+              description: poi.translations?.description || "",
+              translations: Array(poi.translations)?.map((t: any, index: number) =>
                 index === 0
                   ? {
-                      ...t,
-                      imageUrl: t?.imageUrl ? normalizePoiImageUrl(t.imageUrl) : "",
-                      audioUrl: t?.audioUrl || "",
-                    }
+                    ...t,
+                    imageUrl: t?.imageUrl ? normalizePoiImageUrl(t.imageUrl) : "",
+                    audioUrl: t?.audioUrl || "",
+                  }
                   : t
               ),
-          }))
+            }))
         );
         setPagination({
           total: response.data.pagination.total,
@@ -499,8 +499,8 @@ export default function POIManagement() {
                     setIsFilterMenuOpen(false);
                   }}
                   className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${statusFilter === option.value
-                      ? "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400"
-                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    ? "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400"
+                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                     }`}
                 >
                   {option.label}
@@ -597,8 +597,8 @@ export default function POIManagement() {
                     <td className="px-6 py-5">
                       <div
                         className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold cursor-default select-none ${poi.isActive
-                            ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-500"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                          ? "bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-500"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                           }`}
                       >
                         {poi.isActive ? (
@@ -659,8 +659,8 @@ export default function POIManagement() {
                 key={i + 1}
                 onClick={() => setCurrentPage(i + 1)}
                 className={`px-3 py-2 rounded-lg font-medium transition-colors ${currentPage === i + 1
-                    ? "bg-orange-500 text-white"
-                    : "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200"
+                  ? "bg-orange-500 text-white"
+                  : "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200"
                   }`}
               >
                 {i + 1}

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Volume2, VolumeX, ChevronDown, MapPin, Star, DollarSign, Utensils, Play, Pause, SkipForward, ChevronUp, X } from 'lucide-react';
 import { useTranslation } from '@/i18n';
+import { analyticsApi } from '@/lib/api/analytics';
 
 export interface POI {
   id: string;
@@ -40,15 +41,28 @@ export function PoiAudioDrawer({ poi, isGuidanceActive, onToggleGuidance, onClos
   const [isPlaying, setIsPlaying] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const descRef = useRef<HTMLParagraphElement>(null);
+  const playStartTimeRef = useRef<number | null>(null);
+  const totalListenedTimeRef = useRef<number>(0);
   const t = useTranslation();
-
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
-    const onEnded = () => setIsPlaying(false);
+    const onPlay = () => {
+      setIsPlaying(true);
+      playStartTimeRef.current = Date.now();
+    };
+    const onPause = () => {
+      setIsPlaying(false);
+      if (playStartTimeRef.current) {
+        totalListenedTimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
+        playStartTimeRef.current = null;
+      }
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      playStartTimeRef.current = null;
+    };
     const onTimeUpdate = () => {
       setAudioProgress(audio.currentTime);
       setAudioDuration(audio.duration || 0);
@@ -64,7 +78,27 @@ export function PoiAudioDrawer({ poi, isGuidanceActive, onToggleGuidance, onClos
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('timeupdate', onTimeUpdate);
     };
-  }, [audioRef]);
+  }, [audioRef, poi.id]);
+
+  // Heartbeat Location every 10 seconds to maintain online status
+  useEffect(() => {
+    const heartbeat = setInterval(() => {
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            analyticsApi.reportLocation(pos.coords.latitude, pos.coords.longitude);
+          },
+          () => {
+            // Fallback for heartbeat even if GPS fails
+            analyticsApi.reportLocation(0, 0);
+          },
+          { enableHighAccuracy: true }
+        );
+      }
+    }, 10000);
+
+    return () => clearInterval(heartbeat);
+  }, []);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     setIsDragging(true);
@@ -101,6 +135,9 @@ export function PoiAudioDrawer({ poi, isGuidanceActive, onToggleGuidance, onClos
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
+      // NEW: Report listen count exactly when Play is pressed
+      analyticsApi.reportListen(poi.id, 0);
+      
       audio.play().catch(console.warn);
     } else {
       audio.pause();

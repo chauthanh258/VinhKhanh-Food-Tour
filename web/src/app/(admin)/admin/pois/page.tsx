@@ -235,7 +235,12 @@ const POIManager = () => {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="overflow-x-auto rounded-xl border border-border relative">
+        {loading && (
+          <div className="absolute inset-0 bg-secondary/10 backdrop-blur-[1px] flex items-center justify-center z-10">
+            <Badge variant="default">Đang tải...</Badge>
+          </div>
+        )}
         <table className="w-full text-sm text-left">
           <thead className="bg-secondary text-muted-foreground uppercase text-xs font-semibold">
             <tr>
@@ -249,12 +254,7 @@ const POIManager = () => {
               <th className="px-6 py-4 text-right">Hành động</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border relative">
-            {loading && (
-               <div className="absolute inset-0 bg-secondary/20 backdrop-blur-[1px] flex items-center justify-center z-10">
-                 <Badge variant="default">Đang tải...</Badge>
-               </div>
-            )}
+          <tbody className="divide-y divide-border">
             {pois.map((poi) => (
               <tr key={poi.id} className="hover:bg-secondary/50 transition-colors">
                 <td className="px-6 py-4 font-mono text-xs">#{poi.id.slice(0, 8)}</td>
@@ -381,88 +381,6 @@ const POIManager = () => {
             <Button variant="primary" onClick={handleConfirmRestorePOI} className="flex-1">Khôi phục</Button>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Mô tả</label>
-            <Textarea
-              className="h-20"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Nhập mô tả"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Vĩ độ (Lat)</label>
-              <Input 
-                type="number"
-                step="0.0001"
-                value={formData.lat}
-                onChange={(e) => setFormData({ ...formData, lat: parseFloat(e.target.value) })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Kinh độ (Lng)</label>
-              <Input 
-                type="number"
-                step="0.0001"
-                value={formData.lng}
-                onChange={(e) => setFormData({ ...formData, lng: parseFloat(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Vị trí trên bản đồ</label>
-            <MapPicker
-              latitude={formData.lat}
-              longitude={formData.lng}
-              onLocationSelect={(lat, lng) => setFormData({ ...formData, lat, lng })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Đặc sản</label>
-            <Input 
-              value={formData.specialties}
-              onChange={(e) => setFormData({ ...formData, specialties: e.target.value })}
-              placeholder="Nhập đặc sản"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Khoảng giá</label>
-            <Input 
-              value={formData.priceRange}
-              onChange={(e) => setFormData({ ...formData, priceRange: e.target.value })}
-              placeholder="Ví dụ: 50.000đ - 200.000đ"
-            />
-          </div>
-
-          {!isCreateMode && editingPOI && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Chủ sở hữu</label>
-              <Input
-                value={editingPOI.owner?.fullName || editingPOI.owner?.email || 'N/A'}
-                disabled
-              />
-            </div>
-          )}
-
-          {!isCreateMode && editingPOI && (
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Trạng thái</span>
-              <Badge variant={editingPOI.isActive ? 'success' : 'danger'}>
-                {editingPOI.isActive ? 'Hoạt động' : 'Tạm ngưng'}
-              </Badge>
-            </div>
-          )}
-        </div>
-        <div className="flex justify-end gap-2 pt-6 border-t border-border">
-          <Button variant="outline" onClick={() => setIsModalOpen(false)}>Hủy</Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-            {isCreateMode ? 'Thêm' : 'Lưu'}
-          </Button>
         </div>
       </Dialog>
     </div>
