@@ -64,6 +64,26 @@ export const analyticsApi = {
    */
   getAvgListenTime: async (poiId?: string) => {
     const res = await api.get(`/analytics/avg-listen-time${poiId ? `?poi_id=${poiId}` : ''}`);
-    return res.data as AvgListenTime;
+    return res.data; // data contains { poi_id, avg_duration_seconds }
+  },
+
+  /**
+   * Get QR scan statistics.
+   */
+  getQrStats: async () => {
+    const res = await api.get('/analytics/qr-stats');
+    return res.data; // data contains { totalScans, bySource, byPoi }
+  },
+  
+  /**
+   * Report a QR scan event.
+   */
+  reportQrScan: async (poiId: string, source: 'app' | 'external' = 'app') => {
+    try {
+      const sessionId = getAnalyticsSessionId();
+      await api.post('/analytics/qr-scan', { sessionId, poiId, source });
+    } catch (err) {
+      console.error('[Analytics] Failed to report QR scan event:', err);
+    }
   }
 };

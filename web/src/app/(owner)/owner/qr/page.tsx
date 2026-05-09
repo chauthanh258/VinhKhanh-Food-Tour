@@ -87,7 +87,7 @@ export default function QRCodePage() {
   const selectedPoi = filteredPois.find((poi) => poi.id === selectedPoiId) || filteredPois[0] || null;
 
   const restaurantName = selectedPoi?.translations?.name || "Select a restaurant";
-  const directLink = selectedPoi && siteOrigin ? `${siteOrigin}/poi/${selectedPoi.id}` : "";
+  const directLink = selectedPoi && siteOrigin ? `${siteOrigin}/poi/${selectedPoi.id}?src=qr` : "";
   const qrImageUrl = selectedPoi
     ? `https://api.qrserver.com/v1/create-qr-code/?size=${QR_SIZE}x${QR_SIZE}&data=${encodeURIComponent(directLink)}`
     : "";

@@ -165,3 +165,89 @@ export const getOnlineUsers = async (): Promise<number> => {
   console.log(`[Analytics] Real-time online count (15s window): ${count}`);
   return count;
 };
+
+// ─── 7. Save QR scan event ───────────────────────────────────────────────────
+export const saveQrScanEvent = async (
+  sessionId: string,
+  poiId: string,
+  source: string = 'app'
+): Promise<void> => {
+  console.log(`[Analytics] Recording QR scan: session=${sessionId}, poiId=${poiId}, source=${source}`);
+  
+  await prisma.qrScanEvent.create({
+    data: {
+      sessionId,
+      poiId,
+      source,
+    }
+  });
+};
+
+// ─── 8. Get QR scan statistics ────────────────────────────────────────────────
+export interface QrStatsResult {
+  totalScans: number;
+  bySource: { source: string; count: number }[];
+  byPoi: { poiId: string; poiName: string; count: number }[];
+}
+
+export const getQrStats = async (ownerId?: string): Promise<QrStatsResult> => {
+  // 1. Filter condition: if ownerId is provided, only include POIs owned by them
+  const poiFilter = ownerId ? { owner: { id: ownerId } } : {};
+
+  // 2. Get total count
+  const totalScans = await prisma.qrScanEvent.count({
+    where: {
+      poi: poiFilter,
+    },
+  });
+
+  // 3. Get count by source
+  const sourceStats = await prisma.qrScanEvent.groupBy({
+    by: ['source'],
+    where: {
+      poi: poiFilter,
+    },
+    _count: {
+      id: true,
+    },
+  });
+
+  // 4. Get top POIs by scan count
+  const poiStatsRaw = await prisma.qrScanEvent.groupBy({
+    by: ['poiId'],
+    where: {
+      poi: poiFilter,
+    },
+    _count: {
+      id: true,
+    },
+    orderBy: {
+      _count: {
+        id: 'desc',
+      },
+    },
+    take: 10,
+  });
+
+  // Fetch POI names for the top POIs
+  const poiIds = poiStatsRaw.map((s) => s.poiId);
+  const pois = await prisma.pOI.findMany({
+    where: { id: { in: poiIds } },
+    include: { translations: true },
+  });
+
+  const byPoi = poiStatsRaw.map((s) => {
+    const poi = pois.find((p) => p.id === s.poiId);
+    return {
+      poiId: s.poiId,
+      poiName: poi?.translations?.name || 'Unknown POI',
+      count: s._count.id,
+    };
+  });
+
+  return {
+    totalScans,
+    bySource: sourceStats.map((s) => ({ source: s.source, count: s._count.id })),
+    byPoi,
+  };
+};

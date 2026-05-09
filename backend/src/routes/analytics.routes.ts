@@ -269,4 +269,48 @@ router.get(
   analyticsController.getOnlineUsers
 );
 
+/**
+ * @swagger
+ * /analytics/qr-scan:
+ *   post:
+ *     summary: Record a QR scan event
+ *     description: Tracks both in-app and external (camera) QR scans.
+ *     tags: [Analytics]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [sessionId, poiId]
+ *             properties:
+ *               sessionId: { type: string }
+ *               poiId: { type: string, format: uuid }
+ *               source: { type: string, enum: [app, external], default: app }
+ *     responses:
+ *       200:
+ *         description: QR scan recorded
+ */
+router.post('/qr-scan', analyticsController.trackQrScan);
+
+/**
+ * @swagger
+ * /analytics/qr-stats:
+ *   get:
+ *     summary: QR scan statistics (Admin/Owner)
+ *     description: Returns aggregated QR scan data. Admin sees all, Owner sees only their POIs.
+ *     tags: [Analytics]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: QR stats
+ */
+router.get(
+  '/qr-stats',
+  authenticate,
+  authorize(['ADMIN', 'OWNER']),
+  analyticsController.getQrStats
+);
+
 export default router;
