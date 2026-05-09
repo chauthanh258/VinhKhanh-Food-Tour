@@ -5,6 +5,7 @@ import { Users, MapPin, Route, Clock, TrendingUp, ArrowUpRight, ArrowDownRight }
 import { Card, Button, Badge } from '../components/shared-components';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { poiApi } from '@/lib/api/poi';
+import { analyticsApi, TopPoi } from '@/lib/api/analytics';
 import { useCategoryStore, useAuditStore } from '@/store';
 import dynamic from 'next/dynamic';
 
@@ -28,6 +29,13 @@ const getActionLabel = (action: string) => {
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<{
+    onlineUsers: number;
+    topPois: TopPoi[];
+  }>({
+    onlineUsers: 0,
+    topPois: [],
+  });
   const [loading, setLoading] = useState(true);
   const { categories, fetchCategories } = useCategoryStore();
   const { logs, fetchLogs } = useAuditStore();
@@ -36,10 +44,20 @@ const AdminDashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const statsRes = await poiApi.getStats();
+        const [statsRes, onlineRes, topPoisRes] = await Promise.all([
+          poiApi.getStats(),
+          analyticsApi.getOnlineUsers(),
+          analyticsApi.getTopPois(5)
+        ]);
+        
         await fetchCategories();
         await fetchLogs({ skip: 0, take: 5, force: true });
+        
         setStats(statsRes);
+        setAnalytics({
+          onlineUsers: onlineRes.online_count ?? onlineRes, // Handle both object and primitive return
+          topPois: topPoisRes
+        });
       } catch (error) {
         console.error('Failed to fetch stats:', error);
       } finally {
@@ -47,6 +65,27 @@ const AdminDashboard = () => {
       }
     };
     fetchData();
+
+    // Polling analytics every 15 seconds
+    const interval = setInterval(async () => {
+      try {
+        const [onlineRes, topPoisRes] = await Promise.all([
+          analyticsApi.getOnlineUsers(),
+          analyticsApi.getTopPois(5)
+        ]);
+        
+        const count = onlineRes.online_count ?? onlineRes;
+        setAnalytics(prev => ({ 
+          ...prev, 
+          onlineUsers: count,
+          topPois: topPoisRes
+        }));
+      } catch (e) {
+        console.warn('Polling error:', e);
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const chartData = [
@@ -102,6 +141,14 @@ const AdminDashboard = () => {
       trend: 'up', 
       color: 'text-purple-500' 
     },
+    { 
+      label: 'Đang Online', 
+      value: analytics.onlineUsers.toString(), 
+      icon: Users, 
+      change: 'Live', 
+      trend: 'up', 
+      color: 'text-red-500' 
+    }
   ];
       
         return (
@@ -118,7 +165,7 @@ const AdminDashboard = () => {
 
           <div className="space-y-6">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {statCards.map((stat, i) => (
                 <Card key={i} className="relative overflow-hidden group">
                   <div className="flex justify-between items-start">
@@ -151,7 +198,7 @@ const AdminDashboard = () => {
               </Card>
 
               {/* Pie Chart */}
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-1">
                 <h3 className="text-lg font-bold text-foreground mb-6">Lượng khách truy cập</h3>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData}>
@@ -203,6 +250,33 @@ const AdminDashboard = () => {
                 ) : (
                   <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                     Chưa có dữ liệu danh mục
+                  </div>
+                )}
+              </Card>
+
+              {/* Top POIs by Visits */}
+              <Card className="col-span-2">
+                <h3 className="text-lg font-bold text-foreground mb-6">Top POI được ghé thăm nhiều nhất</h3>
+                {analytics.topPois.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={analytics.topPois}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis dataKey="poi_name" stroke="#94a3b8" fontSize={10} />
+                      <YAxis stroke="#94a3b8" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #334155',
+                          borderRadius: '8px',
+                          color: '#f8fafc'
+                        }}
+                      />
+                      <Bar dataKey="visit_count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground text-center">
+                    Chưa có lượt ghé thăm nào<br/>dành cho POI
                   </div>
                 )}
               </Card>

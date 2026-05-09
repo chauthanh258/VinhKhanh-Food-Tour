@@ -46,6 +46,7 @@ model POI {
   translations    POITranslation?
   category        Category?       @relation(fields: [categoryId], references: [id])
   owner           User?           @relation("OwnerPois", fields: [ownerId], references: [id])
+  listenEvents    ListenEvent[]
 
   @@index([lat, lng])
   @@index([categoryId])
@@ -176,3 +177,32 @@ model UserLocation {
   @@map("user_locations")
 }
 
+// ─── Analytics Tables (NEW – do not modify existing tables) ───────────────────
+
+model LocationTrack {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.VarChar(128)
+  lat       Float
+  lng       Float
+  timestamp DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([timestamp])
+  @@index([lat, lng])
+  @@map("location_tracks")
+}
+
+model ListenEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  sessionId       String   @map("session_id") @db.VarChar(128)
+  poiId           String   @map("poi_id") @db.Uuid
+  listenedAt      DateTime @default(now()) @map("listened_at")
+  durationSeconds Int      @default(0) @map("duration_seconds")
+
+  poi POI @relation(fields: [poiId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([poiId])
+  @@index([listenedAt])
+  @@map("listen_events")
+}

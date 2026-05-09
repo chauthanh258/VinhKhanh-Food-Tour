@@ -10,6 +10,7 @@ import PlaceList from '@/app/(app)/tour/components/PlaceList';
 import { useUserStore } from '@/store/userStore';
 import { PoiAudioDrawer, type POI } from '@/app/(app)/tour/components/PoiAudioDrawer';
 import { api } from '@/lib/api';
+import { analyticsApi } from '@/lib/api/analytics';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -49,6 +50,20 @@ function TourPageContent() {
       console.error('Failed to fetch POIs:', err);
     }
   }, [language]);
+
+  // Handle Heartbeat and Offline signaling
+  useEffect(() => {
+    // Note: PoiAudioDrawer also has a heartbeat when open, 
+    // but this ensures online status even when drawer is closed.
+    const interval = setInterval(() => {
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          analyticsApi.reportLocation(pos.coords.latitude, pos.coords.longitude);
+        });
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (trackingMode !== 'auto') {
@@ -113,12 +128,15 @@ function TourPageContent() {
     
     const reportLocation = async () => {
       try {
-        await api.post('/location/report', {
+        // Send to old endpoint for backward compatibility (if needed)
+        api.post('/location/report', {
           lat: userPos[0],
           lng: userPos[1]
-        });
+        }).catch(() => {});
+        
+        // Send to new analytics endpoint
+        await analyticsApi.reportLocation(userPos[0], userPos[1]);
       } catch (err) {
-        // Silently fail location reporting to not disturb user experience
         console.warn('Failed to report location:', err);
       }
     };

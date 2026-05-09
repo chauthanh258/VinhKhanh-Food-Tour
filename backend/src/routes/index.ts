@@ -7,6 +7,7 @@ import moderationRoutes from './moderation.routes';
 import menuItemRoutes from './menuItem.routes';
 import categoryRoutes from './category.routes';
 import locationRoutes from './location.routes';
+import analyticsRoutes from './analytics.routes';
 
 import publicCategoryRoutes from './public.category.routes';
 
@@ -22,5 +23,6 @@ router.use('/moderation', moderationRoutes);
 router.use('/owners', ownerRoutes);
 router.use('/', menuItemRoutes);
 router.use('/location', locationRoutes);
+router.use('/analytics', analyticsRoutes);
 
 export default router;
