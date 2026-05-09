@@ -47,6 +47,7 @@ model POI {
   category        Category?       @relation(fields: [categoryId], references: [id])
   owner           User?           @relation("OwnerPois", fields: [ownerId], references: [id])
   listenEvents    ListenEvent[]
+  qrScans         QrScanEvent[]
 
   @@index([lat, lng])
   @@index([categoryId])
@@ -205,4 +206,19 @@ model ListenEvent {
   @@index([poiId])
   @@index([listenedAt])
   @@map("listen_events")
+}
+
+model QrScanEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.VarChar(128)
+  poiId     String   @map("poi_id") @db.Uuid
+  source    String   @default("app") @db.VarChar(20) // "app" | "external"
+  scannedAt DateTime @default(now()) @map("scanned_at")
+
+  poi POI @relation(fields: [poiId], references: [id], onDelete: Cascade)
+
+  @@index([poiId])
+  @@index([scannedAt])
+  @@index([sessionId])
+  @@map("qr_scan_events")
 }

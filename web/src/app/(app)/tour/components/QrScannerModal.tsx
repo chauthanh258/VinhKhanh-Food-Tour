@@ -7,6 +7,7 @@ import confetti from 'canvas-confetti';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '@/i18n';
+import { analyticsApi } from '@/lib/api/analytics';
 
 interface QrScannerModalProps {
   isOpen: boolean;
@@ -86,6 +87,9 @@ export default function QrScannerModal({ isOpen, onClose }: QrScannerModalProps)
       const poiId = poiMatch[1];
       await stopScanner();
       triggerSuccessEffect();
+      
+      // Track QR scan event
+      void analyticsApi.reportQrScan(poiId, 'app');
       
       setTimeout(() => {
         onClose();

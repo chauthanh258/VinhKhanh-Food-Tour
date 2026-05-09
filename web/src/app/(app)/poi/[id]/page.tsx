@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, MapPin, Star, UtensilsCrossed, Tag, Volume2, Loader2, ExternalLink } from 'lucide-react';
 import { api } from '@/lib/api';
+import { analyticsApi } from '@/lib/api/analytics';
 
 interface PoiTranslation {
   name?: string;
@@ -24,9 +25,20 @@ interface PoiDetail {
 export default function PoiDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [poi, setPoi] = useState<PoiDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const poiId = params?.id;
+    if (!poiId) return;
+
+    // Track external QR scan if src=qr is present
+    if (searchParams.get('src') === 'qr') {
+      void analyticsApi.reportQrScan(poiId, 'external');
+    }
+  }, [params?.id, searchParams]);
 
   useEffect(() => {
     const poiId = params?.id;

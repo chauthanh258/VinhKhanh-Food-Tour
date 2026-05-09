@@ -160,19 +160,48 @@ export const getHeatmapData = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-// ─── 6. GET /api/analytics/online-users ──────────────────────────────────────
-/**
- * Return the number of unique sessions active in the last 5 minutes.
- * A session is considered online if it has sent a location ping OR a listen
- * event within that window.
- *
- * Response 200:
- *   { success: true, data: { online_count: number } }
- */
 export const getOnlineUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const online_count = await trackingService.getOnlineUsers();
     sendResponse(res, 200, { online_count });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const qrScanSchema = z.object({
+  sessionId: z.string().min(1).max(128),
+  poiId: z.string().uuid(),
+  source: z.enum(['app', 'external']).default('app'),
+});
+
+// ─── 7. POST /api/analytics/qr-scan ──────────────────────────────────────────
+/**
+ * Record a QR scan event.
+ */
+export const trackQrScan = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { sessionId, poiId, source } = qrScanSchema.parse(req.body);
+    await trackingService.saveQrScanEvent(sessionId, poiId, source);
+    sendResponse(res, 200, null, 'QR scan recorded');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── 8. GET /api/analytics/qr-stats ─────────────────────────────────────────
+/**
+ * Get QR scan statistics.
+ * - Admin: Sees all data.
+ * - Owner: Sees only their own POIs.
+ */
+export const getQrStats = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = (req as any).user; // From authenticate middleware
+    const ownerId = user.role === 'ADMIN' ? undefined : user.userId;
+
+    const stats = await trackingService.getQrStats(ownerId);
+    sendResponse(res, 200, stats);
   } catch (err) {
     next(err);
   }

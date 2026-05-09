@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Users, MapPin, Route, Clock, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Users, MapPin, Route, Clock, TrendingUp, ArrowUpRight, ArrowDownRight, QrCode } from 'lucide-react';
 import { Card, Button, Badge } from '../components/shared-components';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { poiApi } from '@/lib/api/poi';
@@ -32,9 +32,11 @@ const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState<{
     onlineUsers: number;
     topPois: TopPoi[];
+    qrStats: any;
   }>({
     onlineUsers: 0,
     topPois: [],
+    qrStats: null,
   });
   const [loading, setLoading] = useState(true);
   const { categories, fetchCategories } = useCategoryStore();
@@ -44,10 +46,11 @@ const AdminDashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [statsRes, onlineRes, topPoisRes] = await Promise.all([
+        const [statsRes, onlineRes, topPoisRes, qrStatsRes] = await Promise.all([
           poiApi.getStats(),
           analyticsApi.getOnlineUsers(),
-          analyticsApi.getTopPois(5)
+          analyticsApi.getTopPois(5),
+          analyticsApi.getQrStats()
         ]);
         
         await fetchCategories();
@@ -55,8 +58,9 @@ const AdminDashboard = () => {
         
         setStats(statsRes);
         setAnalytics({
-          onlineUsers: onlineRes.online_count ?? onlineRes, // Handle both object and primitive return
-          topPois: topPoisRes
+          onlineUsers: onlineRes.online_count ?? onlineRes,
+          topPois: topPoisRes,
+          qrStats: qrStatsRes
         });
       } catch (error) {
         console.error('Failed to fetch stats:', error);
@@ -69,16 +73,18 @@ const AdminDashboard = () => {
     // Polling analytics every 15 seconds
     const interval = setInterval(async () => {
       try {
-        const [onlineRes, topPoisRes] = await Promise.all([
+        const [onlineRes, topPoisRes, qrStatsRes] = await Promise.all([
           analyticsApi.getOnlineUsers(),
-          analyticsApi.getTopPois(5)
+          analyticsApi.getTopPois(5),
+          analyticsApi.getQrStats()
         ]);
         
         const count = onlineRes.online_count ?? onlineRes;
         setAnalytics(prev => ({ 
           ...prev, 
           onlineUsers: count,
-          topPois: topPoisRes
+          topPois: topPoisRes,
+          qrStats: qrStatsRes
         }));
       } catch (e) {
         console.warn('Polling error:', e);
@@ -110,6 +116,14 @@ const AdminDashboard = () => {
 
   const statCards = [
     { 
+      label: 'Tổng lượt quét QR', 
+      value: analytics.qrStats?.totalScans?.toString() || '0', 
+      icon: QrCode, 
+      change: 'Active', 
+      trend: 'up', 
+      color: 'text-orange-500' 
+    },
+    { 
       label: 'Tổng POI', 
       value: stats?.pois?.total?.toString() || '0', 
       icon: MapPin, 
@@ -132,14 +146,6 @@ const AdminDashboard = () => {
       change: '-1', 
       trend: 'down', 
       color: 'text-orange-500' 
-    },
-    { 
-      label: 'Danh mục', 
-      value: stats?.categories?.total?.toString() || '0', 
-      icon: Clock, 
-      change: '+5', 
-      trend: 'up', 
-      color: 'text-purple-500' 
     },
     { 
       label: 'Đang Online', 
@@ -188,43 +194,75 @@ const AdminDashboard = () => {
               ))}
             </div>
       
-            {/* Charts Grid */}
+            {/* Realtime Map & Heatmap */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              {/* Realtime Map / Heatmap (2 columns width) */}
               <Card className="lg:col-span-2">
                 <h3 className="text-lg font-bold text-foreground mb-6">Bản đồ thực tế & Mật độ người dùng</h3>
                 <RealtimeMap />
               </Card>
 
-              {/* Pie Chart */}
               <Card className="lg:col-span-1">
-                <h3 className="text-lg font-bold text-foreground mb-6">Lượng khách truy cập</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="name" stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: '8px',
-                        color: '#f8fafc'
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="#10b981" 
-                      dot={{ fill: '#10b981', r: 5 }}
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                <h3 className="text-lg font-bold text-foreground mb-6">Nguồn quét QR</h3>
+                {analytics.qrStats?.bySource?.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={analytics.qrStats.bySource.map((s: any, idx: number) => ({
+                          name: s.source === 'app' ? 'Trong App' : 'Ngoài App',
+                          value: s.count
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {analytics.qrStats.bySource.map((_: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={['#f97316', '#3b82f6'][index % 2]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                    Chưa có dữ liệu quét
+                  </div>
+                )}
               </Card>
-      
-              {/* Pie Chart and recent activity wrapper will wrap naturally but let's just make pie chart span 1 column */}
+            </div>
+
+            {/* Detailed Analytics Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Top POIs by QR Scans */}
+              <Card className="lg:col-span-2">
+                <h3 className="text-lg font-bold text-foreground mb-6">Top POI được quét QR nhiều nhất</h3>
+                {analytics.qrStats?.byPoi?.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={analytics.qrStats.byPoi}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis dataKey="poiName" stroke="#94a3b8" fontSize={10} />
+                      <YAxis stroke="#94a3b8" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#1e293b',
+                          border: '1px solid #334155',
+                          borderRadius: '8px',
+                          color: '#f8fafc'
+                        }}
+                      />
+                      <Bar dataKey="count" fill="#f97316" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-muted-foreground text-center">
+                    Chưa có lượt quét QR nào dành cho POI
+                  </div>
+                )}
+              </Card>
+
+              {/* Category Distribution */}
               <Card>
                 <h3 className="text-lg font-bold text-foreground mb-6">Phân loại danh mục</h3>
                 {categoryData.length > 0 ? (
@@ -250,33 +288,6 @@ const AdminDashboard = () => {
                 ) : (
                   <div className="h-[300px] flex items-center justify-center text-muted-foreground">
                     Chưa có dữ liệu danh mục
-                  </div>
-                )}
-              </Card>
-
-              {/* Top POIs by Visits */}
-              <Card className="col-span-2">
-                <h3 className="text-lg font-bold text-foreground mb-6">Top POI được ghé thăm nhiều nhất</h3>
-                {analytics.topPois.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={analytics.topPois}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis dataKey="poi_name" stroke="#94a3b8" fontSize={10} />
-                      <YAxis stroke="#94a3b8" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#1e293b',
-                          border: '1px solid #334155',
-                          borderRadius: '8px',
-                          color: '#f8fafc'
-                        }}
-                      />
-                      <Bar dataKey="visit_count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground text-center">
-                    Chưa có lượt ghé thăm nào<br/>dành cho POI
                   </div>
                 )}
               </Card>
