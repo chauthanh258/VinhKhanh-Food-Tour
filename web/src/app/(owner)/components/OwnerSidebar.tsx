@@ -46,7 +46,7 @@ export function OwnerSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col h-screen sticky top-0 transition-colors duration-300">
+    <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col h-full overflow-y-auto transition-colors duration-300">
       <div className="p-6 flex items-center gap-3">
         <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-200 dark:shadow-orange-900/20">
           <Utensils className="text-white w-6 h-6" />
