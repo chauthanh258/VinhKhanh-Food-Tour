@@ -31,11 +31,11 @@ export default function OwnerLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50/50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100">
+    <div className="flex h-screen bg-gray-50/50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100">
       <OwnerSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <OwnerTopbar />
-        <main className="flex-1 p-8 overflow-y-auto bg-blue-50">
+        <main className="flex-1 overflow-y-auto bg-blue-50 p-8">
           {children}
         </main>
       </div>
